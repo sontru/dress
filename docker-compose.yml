@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  photo-library:
+    build: .
+    container_name: photo-library
+    ports:
+      - "8082:8082"
+    environment:
+      - PORT=8082
+      - DATABASE_URL=photo_library.db
+      - ENVIRONMENT=production
+    volumes:
+      - ./photo_library.db:/app/photo_library.db
+      - ./static/images:/app/static/images
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8082/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  photo-library-db:
+    driver: local

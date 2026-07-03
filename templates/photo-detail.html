@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Detail - My Media Hub</title>
+    <link rel="stylesheet" href="/mmh/static/css/style.css">
+    <link rel="stylesheet" href="/mmh/static/css/layout.css">
+    <style>
+        .detail-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .detail-media {
+            min-width: 0;
+        }
+
+        .detail-title {
+            font-size: 32px;
+            margin: 0 0 16px 0;
+            font-weight: 600;
+            color: #222;
+        }
+
+        .detail-image {
+            aspect-ratio: 1.256 / 1;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            background: #f5f2ee;
+        }
+
+        .detail-image.zoomed {
+            overflow: auto;
+            cursor: grab;
+        }
+
+        .detail-image.dragging {
+            cursor: grabbing;
+            user-select: none;
+        }
+
+        .detail-image img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+            max-width: none;
+            max-height: none;
+        }
+
+        .photographer-line {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 24px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .photographer-line a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .photographer-line a:hover {
+            text-decoration: underline;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 32px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .detail-media .meta-grid {
+            margin-top: 16px;
+        }
+
+        .meta-item {
+            display: flex;
+            gap: 12px;
+        }
+
+        .meta-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            flex-shrink: 0;
+        }
+
+        .meta-content {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-label {
+            font-size: 13px;
+            color: #999;
+            font-weight: 500;
+        }
+
+        .meta-value {
+            font-size: 15px;
+            color: #222;
+            font-weight: 500;
+        }
+
+        .detail-section {
+            margin-bottom: 32px;
+        }
+
+        .detail-section h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #222;
+            margin: 0 0 12px 0;
+        }
+
+        .detail-text {
+            line-height: 1.6;
+            color: #555;
+            font-size: 14px;
+            white-space: pre-wrap;
+            max-height: var(--photo-box-height, 560px);
+            overflow: auto;
+            padding: 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        .keywords-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .keyword-tag {
+            display: inline-block;
+            padding: 6px 12px;
+            background: #f0f2f5;
+            border: 1px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .keyword-tag:hover {
+            background: #e8eaed;
+            border-color: #007bff;
+            color: #007bff;
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 16px;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #e0e0e0;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .price-display {
+            font-size: 24px;
+            font-weight: 700;
+            color: #222;
+            margin: 0;
+            min-width: 100px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .owner-panel {
+            width: 100%;
+            display: grid;
+            gap: 14px;
+        }
+
+        .owner-panel.hidden {
+            display: none;
+        }
+
+        .owner-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .owner-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #f0f2f5;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .owner-controls {
+            display: grid;
+            grid-template-columns: minmax(180px, 1fr) auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .owner-controls select,
+        .owner-edit-form input,
+        .owner-edit-form textarea {
+            width: 100%;
+            border: 1px solid #d7dce2;
+            border-radius: 4px;
+            padding: 10px 12px;
+            font: inherit;
+            background: #fff;
+        }
+
+        .owner-action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn-owner {
+            background: #f8f9fa;
+            color: #222;
+            border: 1px solid #d7dce2;
+        }
+
+        .btn-owner:hover {
+            background: #eef2f6;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #bd2130;
+        }
+
+        .owner-edit-form {
+            display: none;
+            gap: 12px;
+            padding: 14px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        .owner-edit-form.active {
+            display: grid;
+        }
+
+        .owner-edit-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .owner-edit-form label {
+            display: grid;
+            gap: 6px;
+            font-size: 13px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .action-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-collection {
+            background: #f8f9fa;
+            color: #222;
+            border: 1px solid #e0e0e0;
+        }
+
+        .btn-collection:hover {
+            background: #e8eaed;
+        }
+
+        .btn-cart {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-cart:hover {
+            background: #0056b3;
+        }
+
+        .navigation-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+            gap: 12px;
+            align-items: center;
+            margin-top: 16px;
+        }
+
+        .nav-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #222;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .nav-button.results-button {
+            background: #ffffff;
+            border-color: #007bff;
+            color: #007bff;
+        }
+
+        .nav-button.results-button:hover {
+            background: #eef6ff;
+        }
+
+        .nav-button:hover {
+            background: #e8eaed;
+            color: #007bff;
+        }
+
+        .nav-button:disabled,
+        .nav-button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .nav-button:disabled:hover,
+        .nav-button.disabled:hover {
+            background: #f8f9fa;
+            color: #222;
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .zoom-button {
+            width: 36px;
+            min-width: 36px;
+            padding: 8px 0;
+            font-weight: 700;
+        }
+
+        .collections-section {
+            max-width: 1400px;
+            margin: 60px auto;
+            padding: 0 20px;
+        }
+
+        .collections-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #222;
+        }
+
+        .collections-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .collection-card {
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .collection-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .collection-image {
+            width: 100%;
+            padding-bottom: 100%;
+            position: relative;
+            overflow: hidden;
+            background: #e8eaed;
+        }
+
+        .collection-image img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .collection-info {
+            padding: 12px;
+        }
+
+        .collection-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .collection-count {
+            font-size: 12px;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .detail-container {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .detail-title {
+                font-size: 24px;
+            }
+
+            .meta-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .detail-actions {
+                flex-direction: column-reverse;
+                align-items: stretch;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+
+            .action-button {
+                justify-content: center;
+            }
+
+            .owner-controls,
+            .owner-edit-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .navigation-row {
+                gap: 12px;
+                grid-template-columns: 1fr;
+            }
+
+            .nav-button {
+                width: 100%;
+            }
+
+            .zoom-controls {
+                width: 100%;
+            }
+
+            .zoom-button {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Navigation -->
+    <header class="header">
+        <div class="container">
+            <a href="/mmh/" class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24">
+                    <path d="M3 13a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-2v-2a4 4 0 0 0-8 0v2H3zm8-8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/>
+                </svg>
+                <span>My Media Hub</span>
+            </a>
+            <nav class="nav-menu">
+                <a href="/mmh/photos" class="nav-link">Photos</a>
+                <a href="#" class="nav-link">Illustrations</a>
+                <a href="#" class="nav-link">Vectors</a>
+                <a href="#" class="nav-link">Videos</a>
+                <a href="#" class="nav-link">Collections</a>
+            </nav>
+            <div class="header-actions">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search for photos, vectors, videos and more" />
+                    <svg class="search-icon" viewBox="0 0 24 24">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <a href="/mmh/register" id="registerButton" class="explore-link" data-auth-register>Register</a>
+                <a href="#" class="cart-link">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m10 0h2m-11 0a2 2 0 11-4 0 2 2 0 014 0m12 0a2 2 0 11-4 0 2 2 0 014 0"/>
+                    </svg>
+                    <span class="cart-count">0</span>
+                </a>
+                <a href="/mmh/my-media" id="myMediaButton" class="sign-in" style="display: none; text-decoration: none;">My Media</a>
+                <a href="/mmh/login" id="authButton" class="sign-in" style="text-decoration: none;">Sign in</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="detail-container">
+            <!-- Image Section -->
+            <div class="detail-media">
+                <h1 id="detailTitle" class="detail-title"></h1>
+
+                <div class="photographer-line">
+                    <a href="#" id="detailPhotographer"></a>
+                </div>
+
+                <div class="detail-image">
+                    <img id="detailImage" src="" alt="Photo" />
+                </div>
+
+                <!-- Navigation -->
+                <div class="navigation-row" id="navigationRow"></div>
+
+                <!-- Metadata Grid -->
+                <div class="meta-grid" id="detailMeta"></div>
+            </div>
+
+            <!-- Info Section -->
+            <div class="detail-info">
+                <!-- Detail Section -->
+                <div class="detail-section">
+                    <h3>Detail</h3>
+                    <div class="detail-text" id="detailDescription"></div>
+                </div>
+
+                <!-- Keywords -->
+                <div class="detail-section">
+                    <h3>Keywords</h3>
+                    <div class="keywords-tags" id="detailTags"></div>
+                </div>
+
+                <!-- Actions -->
+                <div class="detail-actions" id="detailActions">
+                    <div class="price-display" id="detailPrice">$29.99</div>
+                    <div class="action-buttons" id="publicPhotoActions">
+                        <button class="action-button btn-collection" onclick="addToCollection()">♡ Add to collection</button>
+                        <button class="action-button btn-cart" onclick="addToCart()"><span>🛒</span> Add to cart</button>
+                    </div>
+                    <div class="owner-panel hidden" id="ownerPhotoActions"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collections Section -->
+        <div class="collections-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 class="collections-title">My Collections</h2>
+                <a href="#" style="color: #007bff; text-decoration: none; font-size: 14px;">View all collections</a>
+            </div>
+            <div class="collections-grid" id="collectionsGrid"></div>
+        </div>
+    </main>
+
+    <script src="/mmh/static/js/paths.js"></script>
+    <script>
+        let currentPhotoId = null;
+        let currentPhoto = null;
+        let currentUser = null;
+        let allPhotos = [];
+        let ownedCollections = [];
+        let photoCollections = [];
+        let currentPhotoIndex = 0;
+        let photoZoom = 1;
+        let isDraggingPhoto = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let dragScrollLeft = 0;
+        let dragScrollTop = 0;
+
+        // Extract photo ID from URL
+        function getPhotoIdFromUrl() {
+            const pathParts = window.location.pathname.split('/');
+            return pathParts[pathParts.length - 1];
+        }
+
+        // Load photo details
+        async function loadPhotoDetail() {
+            const photoId = getPhotoIdFromUrl();
+            currentPhotoId = photoId;
+
+            try {
+                // Load all photos to enable navigation
+                const allResponse = await fetch(appPath('/api/photos?page=1&pageSize=100'));
+                const allResult = await allResponse.json();
+                allPhotos = allResult.photos || [];
+
+                // Find current photo index
+                currentPhotoIndex = allPhotos.findIndex(p => p.id == photoId);
+
+                // Load specific photo
+                const response = await fetch(appPath(`/api/photos?id=${photoId}`));
+                const photos = await response.json();
+                const photo = photos[0];
+
+                if (!photo) {
+                    showErrorPage();
+                    return;
+                }
+                currentPhoto = photo;
+                currentUser = await fetchCurrentUser();
+
+                // Populate detail page
+                const detailImage = document.getElementById('detailImage');
+                detailImage.onload = () => {
+                    applyImageEdgeBackdrop(detailImage);
+                    syncDescriptionHeight();
+                };
+                detailImage.src = appPath(photo.image_path);
+                resetPhotoZoom(false);
+                document.getElementById('detailTitle').textContent = capitalizeFirstWord(photo.title);
+                document.getElementById('detailPhotographer').textContent = formatPhotographer(photo);
+                document.getElementById('detailPrice').textContent = `$${photo.price || '29.99'}`;
+                document.getElementById('detailDescription').textContent = photo.description;
+                await renderDetailActions(photo);
+
+                // Populate metadata
+                const metaHTML = `
+                    <div class="meta-item">
+                        <div class="meta-icon">⊙</div>
+                        <div class="meta-content">
+                            <div class="meta-label">ID</div>
+                            <div class="meta-value">${photo.id}</div>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-icon">▢</div>
+                        <div class="meta-content">
+                            <div class="meta-label">Dimensions</div>
+                            <div class="meta-value">${photo.dimensions}</div>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-icon">📄</div>
+                        <div class="meta-content">
+                            <div class="meta-label">File type</div>
+                            <div class="meta-value">${photo.file_type}</div>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-icon">💾</div>
+                        <div class="meta-content">
+                            <div class="meta-label">File size</div>
+                            <div class="meta-value">${photo.file_size}</div>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-icon">⟳</div>
+                        <div class="meta-content">
+                            <div class="meta-label">Orientation</div>
+                            <div class="meta-value">${photo.orientation}</div>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-icon">◊</div>
+                        <div class="meta-content">
+                            <div class="meta-label">Resolution</div>
+                            <div class="meta-value">${photo.resolution}</div>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-icon">◉</div>
+                        <div class="meta-content">
+                            <div class="meta-label">Color mode</div>
+                            <div class="meta-value">${photo.color_mode}</div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('detailMeta').innerHTML = metaHTML;
+
+                // Populate tags
+                const tagsHTML = (photo.tags || []).map(tag => 
+                    `<div class="keyword-tag">${tag}</div>`
+                ).join('');
+                document.getElementById('detailTags').innerHTML = tagsHTML;
+
+                // Setup navigation
+                setupNavigation();
+
+                // Load collections
+                loadCollectionsPreview();
+            } catch (error) {
+                console.error('Error loading photo detail:', error);
+                showErrorPage();
+            }
+        }
+
+        function setupNavigation() {
+            const navRow = document.getElementById('navigationRow');
+            const prevButton = currentPhotoIndex > 0 ? 
+                `<a href="${appPath(`/photo/${allPhotos[currentPhotoIndex - 1].id}`)}" class="nav-button">← Previous</a>` :
+                `<button class="nav-button disabled" disabled>← Previous</button>`;
+            
+            const nextButton = currentPhotoIndex < allPhotos.length - 1 ?
+                `<a href="${appPath(`/photo/${allPhotos[currentPhotoIndex + 1].id}`)}" class="nav-button">Next →</a>` :
+                `<button class="nav-button disabled" disabled>Next →</button>`;
+
+            navRow.innerHTML = `
+                ${prevButton}
+                <button type="button" id="zoomResetButton" class="nav-button" onclick="resetPhotoZoom()">Reset</button>
+                <a href="/mmh/" class="nav-button results-button">Back to results</a>
+                <div class="zoom-controls" aria-label="Photo zoom controls">
+                    <button type="button" id="zoomOutButton" class="nav-button zoom-button" onclick="zoomPhoto(-0.25)" aria-label="Zoom out">-</button>
+                    <button type="button" id="zoomInButton" class="nav-button zoom-button" onclick="zoomPhoto(0.25)" aria-label="Zoom in">+</button>
+                </div>
+                ${nextButton}
+            `;
+            updateZoomControls();
+        }
+
+        function capitalizeFirstWord(value) {
+            const title = String(value || '');
+            return title.replace(/^(\s*)(\S)/, (_, leadingSpace, firstLetter) => {
+                return leadingSpace + firstLetter.toUpperCase();
+            });
+        }
+
+        function formatPhotographer(photo) {
+            const name = String(photo.photographer || '').trim() || 'Unknown photographer';
+            const username = String(photo.photographer_username || '').trim() || usernameFromName(name);
+            return `${name} (${username})`;
+        }
+
+        function usernameFromName(name) {
+            return name.toLowerCase().replace(/[^a-z0-9]+/g, '').trim() || 'unknown';
+        }
+
+        async function fetchCurrentUser() {
+            try {
+                const response = await fetch(appPath('/api/me'));
+                if (!response.ok) return null;
+                return await response.json();
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function isOwnedPhoto(photo) {
+            return Boolean(currentUser && photo && Number(photo.user_id) === Number(currentUser.id));
+        }
+
+        async function renderDetailActions(photo) {
+            const price = document.getElementById('detailPrice');
+            const publicActions = document.getElementById('publicPhotoActions');
+            const ownerActions = document.getElementById('ownerPhotoActions');
+            if (!price || !publicActions || !ownerActions) return;
+
+            if (!isOwnedPhoto(photo)) {
+                price.style.display = '';
+                publicActions.style.display = '';
+                ownerActions.classList.add('hidden');
+                ownerActions.innerHTML = '';
+                return;
+            }
+
+            price.style.display = 'none';
+            publicActions.style.display = 'none';
+            ownerActions.classList.remove('hidden');
+
+            await Promise.all([loadOwnedCollections(), loadPhotoCollections()]);
+            ownerActions.innerHTML = ownerPanelHTML(photo);
+            populateOwnerEditForm(photo);
+        }
+
+        async function loadOwnedCollections() {
+            if (!currentUser) {
+                ownedCollections = [];
+                return;
+            }
+
+            try {
+                const response = await fetch(appPath(`/api/collections?user_id=${currentUser.id}`));
+                ownedCollections = response.ok ? await response.json() : [];
+            } catch (error) {
+                ownedCollections = [];
+            }
+        }
+
+        async function loadPhotoCollections() {
+            try {
+                const response = await fetch(appPath(`/api/photos/${currentPhotoId}/collections`));
+                photoCollections = response.ok ? await response.json() : [];
+            } catch (error) {
+                photoCollections = [];
+            }
+        }
+
+        function ownerPanelHTML(photo) {
+            const names = photoCollections.map((collection) => collection.name);
+            if (photo.user_category && !names.includes(photo.user_category)) names.push(photo.user_category);
+            const collectionText = names.length ? names.join(', ') : 'No collection';
+            const selectedCollectionId = photoCollections[0]?.id || '';
+            const visibilityText = photo.is_public ? 'Public' : 'Private';
+            const options = ownedCollections.map((collection) => `
+                <option value="${collection.id}" ${collection.id === selectedCollectionId ? 'selected' : ''}>${escapeHtml(collection.name)}</option>
+            `).join('');
+
+            return `
+                <div class="owner-summary">
+                    <span>Collection</span>
+                    <span class="owner-pill" id="ownerCollectionLabel">${escapeHtml(collectionText)}</span>
+                    <span>Status</span>
+                    <span class="owner-pill" id="ownerVisibilityLabel">${visibilityText}</span>
+                </div>
+                <div class="owner-controls">
+                    <select id="moveCollectionSelect" aria-label="Move photo to collection">
+                        <option value="">Choose collection</option>
+                        ${options}
+                    </select>
+                    <button type="button" class="action-button btn-owner" onclick="movePhoto()">Move photo</button>
+                </div>
+                <div class="owner-action-buttons">
+                    <button type="button" class="action-button btn-owner" onclick="toggleOwnerEdit()">Edit</button>
+                    <button type="button" class="action-button btn-owner" onclick="toggleOwnerEdit()">Change properties</button>
+                    <button type="button" class="action-button btn-owner" onclick="setPhotoVisibility(true)">Make public</button>
+                    <button type="button" class="action-button btn-owner" onclick="setPhotoVisibility(false)">Make private</button>
+                    <button type="button" class="action-button btn-danger" onclick="removeOwnedPhoto()">Remove</button>
+                </div>
+                <form id="ownerEditForm" class="owner-edit-form" onsubmit="saveOwnerPhoto(event)">
+                    <label>
+                        Title
+                        <input id="ownerEditTitle" name="title" type="text" required>
+                    </label>
+                    <label>
+                        Description
+                        <textarea id="ownerEditDescription" name="description" rows="4"></textarea>
+                    </label>
+                    <div class="owner-edit-grid">
+                        <label>
+                            My Media Hub category
+                            <input id="ownerEditCategory" name="category" type="text">
+                        </label>
+                        <label>
+                            Collection/category
+                            <input id="ownerEditUserCategory" name="user_category" type="text">
+                        </label>
+                    </div>
+                    <div class="owner-edit-grid">
+                        <label>
+                            Cost
+                            <input id="ownerEditPrice" name="price" type="number" min="0" step="0.01">
+                        </label>
+                        <label>
+                            Visibility
+                            <select id="ownerEditVisibility" name="is_public">
+                                <option value="true">Public</option>
+                                <option value="false">Private</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="owner-action-buttons">
+                        <button type="submit" class="action-button btn-cart">Save changes</button>
+                        <button type="button" class="action-button btn-owner" onclick="toggleOwnerEdit(false)">Cancel</button>
+                    </div>
+                </form>
+            `;
+        }
+
+        function populateOwnerEditForm(photo) {
+            document.getElementById('ownerEditTitle').value = photo.title || '';
+            document.getElementById('ownerEditDescription').value = photo.description || '';
+            document.getElementById('ownerEditCategory').value = photo.category || '';
+            document.getElementById('ownerEditUserCategory').value = photo.user_category || '';
+            document.getElementById('ownerEditPrice').value = photo.price || 0;
+            document.getElementById('ownerEditVisibility').value = String(Boolean(photo.is_public));
+        }
+
+        function toggleOwnerEdit(forceOpen = null) {
+            const form = document.getElementById('ownerEditForm');
+            if (!form) return;
+            const shouldOpen = forceOpen === null ? !form.classList.contains('active') : forceOpen;
+            form.classList.toggle('active', shouldOpen);
+        }
+
+        function zoomPhoto(delta, focalPoint = null) {
+            const imageBox = document.querySelector('.detail-image');
+            if (!imageBox) return;
+
+            const previousZoom = photoZoom;
+            photoZoom = Math.min(3, Math.max(1, Number((photoZoom + delta).toFixed(2))));
+            applyPhotoZoom(previousZoom, true, focalPoint);
+        }
+
+        function resetPhotoZoom(updateControls = true) {
+            photoZoom = 1;
+            applyPhotoZoom(1, updateControls);
+        }
+
+        function applyPhotoZoom(previousZoom = 1, updateControls = true, focalPoint = null) {
+            const imageBox = document.querySelector('.detail-image');
+            const detailImage = document.getElementById('detailImage');
+            if (!imageBox || !detailImage) return;
+
+            const centerX = focalPoint
+                ? imageBox.scrollLeft + focalPoint.x
+                : imageBox.scrollLeft + imageBox.clientWidth / 2;
+            const centerY = focalPoint
+                ? imageBox.scrollTop + focalPoint.y
+                : imageBox.scrollTop + imageBox.clientHeight / 2;
+            const viewportX = focalPoint ? focalPoint.x : imageBox.clientWidth / 2;
+            const viewportY = focalPoint ? focalPoint.y : imageBox.clientHeight / 2;
+            const ratio = previousZoom > 0 ? photoZoom / previousZoom : 1;
+
+            detailImage.style.width = `${photoZoom * 100}%`;
+            detailImage.style.height = `${photoZoom * 100}%`;
+            imageBox.classList.toggle('zoomed', photoZoom > 1);
+
+            if (photoZoom === 1) {
+                imageBox.scrollLeft = 0;
+                imageBox.scrollTop = 0;
+            } else {
+                requestAnimationFrame(() => {
+                    imageBox.scrollLeft = (centerX * ratio) - viewportX;
+                    imageBox.scrollTop = (centerY * ratio) - viewportY;
+                });
+            }
+
+            if (updateControls) updateZoomControls();
+        }
+
+        function updateZoomControls() {
+            const resetButton = document.getElementById('zoomResetButton');
+            const zoomOutButton = document.getElementById('zoomOutButton');
+            const zoomInButton = document.getElementById('zoomInButton');
+            const isDefaultZoom = photoZoom === 1;
+
+            if (resetButton) resetButton.disabled = isDefaultZoom;
+            if (zoomOutButton) zoomOutButton.disabled = isDefaultZoom;
+            if (zoomInButton) zoomInButton.disabled = photoZoom >= 3;
+        }
+
+        function setupPhotoDragging() {
+            const imageBox = document.querySelector('.detail-image');
+            if (!imageBox) return;
+
+            imageBox.addEventListener('mousedown', (event) => {
+                if (photoZoom === 1 || event.button !== 0) return;
+
+                isDraggingPhoto = true;
+                dragStartX = event.pageX;
+                dragStartY = event.pageY;
+                dragScrollLeft = imageBox.scrollLeft;
+                dragScrollTop = imageBox.scrollTop;
+                imageBox.classList.add('dragging');
+                event.preventDefault();
+            });
+
+            imageBox.addEventListener('wheel', (event) => {
+                event.preventDefault();
+
+                const rect = imageBox.getBoundingClientRect();
+                const focalPoint = {
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top
+                };
+                const delta = event.deltaY < 0 ? 0.25 : -0.25;
+                zoomPhoto(delta, focalPoint);
+            }, { passive: false });
+
+            document.addEventListener('mousemove', (event) => {
+                if (!isDraggingPhoto) return;
+
+                imageBox.scrollLeft = dragScrollLeft - (event.pageX - dragStartX);
+                imageBox.scrollTop = dragScrollTop - (event.pageY - dragStartY);
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (!isDraggingPhoto) return;
+
+                isDraggingPhoto = false;
+                imageBox.classList.remove('dragging');
+            });
+        }
+
+        async function loadCollectionsPreview() {
+            try {
+                const collectionsUrl = currentUser ? appPath(`/api/collections?user_id=${currentUser.id}`) : appPath('/api/collections?user_id=1');
+                const response = await fetch(collectionsUrl);
+                const collections = await response.json();
+
+                const grid = document.getElementById('collectionsGrid');
+                grid.innerHTML = collections.slice(0, 5).map((col, idx) => `
+                    <a href="#" class="collection-card" onclick="event.preventDefault()">
+                        <div class="collection-image">
+                            <img src="${appPath(allPhotos[idx % allPhotos.length]?.thumbnail || '')}" alt="${col.name}" />
+                        </div>
+                        <div class="collection-info">
+                            <div class="collection-name">${col.name}</div>
+                            <div class="collection-count">${col.photo_count} images</div>
+                        </div>
+                    </a>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading collections:', error);
+            }
+        }
+
+        function addToCart() {
+            fetch(appPath(`/api/cart/add`), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: 1, photo_id: parseInt(currentPhotoId) })
+            }).then(r => r.json()).then(data => {
+                showAlert('Photo added to cart', 'success');
+                updateCartCount();
+            }).catch(error => {
+                console.error('Error adding to cart:', error);
+                showAlert('Error adding to cart', 'error');
+            });
+        }
+
+        function addToCollection() {
+            showAlert('Add to collection feature coming soon', 'info');
+        }
+
+        async function movePhoto() {
+            const select = document.getElementById('moveCollectionSelect');
+            const collectionId = Number(select?.value || 0);
+            if (!collectionId) {
+                showAlert('Choose a collection first', 'info');
+                return;
+            }
+
+            try {
+                const response = await fetch(appPath(`/api/photos/${currentPhotoId}/move`), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ collection_id: collectionId })
+                });
+                if (!response.ok) throw new Error(await response.text());
+
+                const movedTo = ownedCollections.find((collection) => collection.id === collectionId);
+                currentPhoto.user_category = movedTo?.name || currentPhoto.user_category;
+                await renderDetailActions(currentPhoto);
+                showAlert('Photo moved', 'success');
+            } catch (error) {
+                console.error('Error moving photo:', error);
+                showAlert('Error moving photo', 'error');
+            }
+        }
+
+        async function setPhotoVisibility(isPublic) {
+            try {
+                const response = await fetch(appPath(`/api/photos/${currentPhotoId}/visibility`), {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_public: isPublic })
+                });
+                if (!response.ok) throw new Error(await response.text());
+
+                currentPhoto.is_public = isPublic;
+                await renderDetailActions(currentPhoto);
+                showAlert(isPublic ? 'Photo is public' : 'Photo is private', 'success');
+            } catch (error) {
+                console.error('Error updating visibility:', error);
+                showAlert('Error updating visibility', 'error');
+            }
+        }
+
+        async function saveOwnerPhoto(event) {
+            event.preventDefault();
+
+            const updatedPhoto = {
+                ...currentPhoto,
+                title: document.getElementById('ownerEditTitle').value.trim(),
+                description: document.getElementById('ownerEditDescription').value.trim(),
+                category: document.getElementById('ownerEditCategory').value.trim(),
+                user_category: document.getElementById('ownerEditUserCategory').value.trim(),
+                price: Number(document.getElementById('ownerEditPrice').value || 0),
+                is_public: document.getElementById('ownerEditVisibility').value === 'true'
+            };
+
+            try {
+                const response = await fetch(appPath(`/api/photos/${currentPhotoId}`), {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updatedPhoto)
+                });
+                if (!response.ok) throw new Error(await response.text());
+
+                currentPhoto = updatedPhoto;
+                document.getElementById('detailTitle').textContent = capitalizeFirstWord(currentPhoto.title);
+                document.getElementById('detailDescription').textContent = currentPhoto.description;
+                document.getElementById('detailPrice').textContent = `$${currentPhoto.price || '29.99'}`;
+                await renderDetailActions(currentPhoto);
+                showAlert('Photo updated', 'success');
+            } catch (error) {
+                console.error('Error updating photo:', error);
+                showAlert('Error updating photo', 'error');
+            }
+        }
+
+        async function removeOwnedPhoto() {
+            if (!window.confirm('Remove this photo from your library?')) return;
+
+            try {
+                const response = await fetch(appPath(`/api/photos/${currentPhotoId}`), { method: 'DELETE' });
+                if (!response.ok) throw new Error(await response.text());
+                showAlert('Photo removed', 'success');
+                window.location.href = appPath('/upload');
+            } catch (error) {
+                console.error('Error removing photo:', error);
+                showAlert('Error removing photo', 'error');
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[char]));
+        }
+
+        function applyImageEdgeBackdrop(img) {
+            const imageBox = img.closest('.detail-image');
+            if (!imageBox || !img.naturalWidth || !img.naturalHeight) return;
+
+            try {
+                const canvas = document.createElement('canvas');
+                const sampleSize = 64;
+                canvas.width = sampleSize;
+                canvas.height = sampleSize;
+
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
+
+                const imageAspect = img.naturalWidth / img.naturalHeight;
+                const boxAspect = imageBox.clientWidth / imageBox.clientHeight;
+
+                if (boxAspect > imageAspect) {
+                    const left = paleColor(edgeColor(ctx, sampleSize, 'left'));
+                    const right = paleColor(edgeColor(ctx, sampleSize, 'right'));
+                    imageBox.style.background = `linear-gradient(90deg, ${left} 0%, ${left} 50%, ${right} 50%, ${right} 100%)`;
+                } else {
+                    const top = paleColor(edgeColor(ctx, sampleSize, 'top'));
+                    const bottom = paleColor(edgeColor(ctx, sampleSize, 'bottom'));
+                    imageBox.style.background = `linear-gradient(180deg, ${top} 0%, ${top} 50%, ${bottom} 50%, ${bottom} 100%)`;
+                }
+            } catch (error) {
+                imageBox.style.background = '#f5f2ee';
+            }
+        }
+
+        function edgeColor(ctx, size, edge) {
+            const strip = 3;
+            let x = 0;
+            let y = 0;
+            let width = size;
+            let height = strip;
+
+            if (edge === 'bottom') y = size - strip;
+            if (edge === 'left' || edge === 'right') {
+                width = strip;
+                height = size;
+                if (edge === 'right') x = size - strip;
+            }
+
+            const pixels = ctx.getImageData(x, y, width, height).data;
+            let r = 0;
+            let g = 0;
+            let b = 0;
+            let count = 0;
+
+            for (let i = 0; i < pixels.length; i += 4) {
+                r += pixels[i];
+                g += pixels[i + 1];
+                b += pixels[i + 2];
+                count++;
+            }
+
+            return {
+                r: Math.round(r / count),
+                g: Math.round(g / count),
+                b: Math.round(b / count)
+            };
+        }
+
+        function paleColor(color) {
+            const lighten = 0.72;
+            const r = Math.round(color.r + (255 - color.r) * lighten);
+            const g = Math.round(color.g + (255 - color.g) * lighten);
+            const b = Math.round(color.b + (255 - color.b) * lighten);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function updateCartCount() {
+            fetch(appPath('/api/cart?user_id=1'))
+                .then(r => r.json())
+                .then(data => {
+                    const items = Array.isArray(data) ? data : data.items || [];
+                    const count = items.length || 0;
+                    document.querySelectorAll('.cart-count').forEach(el => {
+                        el.textContent = count;
+                    });
+                });
+        }
+
+        async function setupAuthButton() {
+            const authButton = document.getElementById('authButton');
+            const myMediaButton = document.getElementById('myMediaButton');
+            const registerButton = document.getElementById('registerButton');
+            if (!authButton) return;
+
+            try {
+                const response = await fetch(appPath('/api/me'));
+                if (!response.ok) {
+                    authButton.textContent = 'Sign in';
+                    authButton.href = appPath('/login');
+                    if (myMediaButton) myMediaButton.style.display = 'none';
+                    if (registerButton) registerButton.style.display = '';
+                    return;
+                }
+
+                authButton.textContent = 'Sign out';
+                authButton.href = '#';
+                if (myMediaButton) myMediaButton.style.display = '';
+                if (registerButton) registerButton.style.display = 'none';
+                authButton.addEventListener('click', async (event) => {
+                    event.preventDefault();
+                    authButton.style.pointerEvents = 'none';
+
+                    try {
+                        const logoutResponse = await fetch(appPath('/api/logout'), { method: 'POST' });
+                        if (!logoutResponse.ok) throw new Error(await logoutResponse.text());
+                        window.location.href = appPath('/');
+                    } catch (error) {
+                        console.error('Error signing out:', error);
+                        showAlert('Error signing out', 'error');
+                        authButton.style.pointerEvents = '';
+                    }
+                });
+            } catch (error) {
+                authButton.textContent = 'Sign in';
+                authButton.href = appPath('/login');
+                if (myMediaButton) myMediaButton.style.display = 'none';
+                if (registerButton) registerButton.style.display = '';
+            }
+        }
+
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 16px 20px;
+                background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+                color: white;
+                border-radius: 4px;
+                z-index: 1000;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                animation: slideIn 0.3s ease-out;
+            `;
+            alert.textContent = message;
+            document.body.appendChild(alert);
+            setTimeout(() => alert.remove(), 3000);
+        }
+
+        function showErrorPage() {
+            document.body.innerHTML = '<div style="text-align: center; padding: 40px;"><h1>Photo not found</h1><p><a href="/mmh/">Back to gallery</a></p></div>';
+        }
+
+        function syncDescriptionHeight() {
+            const imageBox = document.querySelector('.detail-image');
+            if (!imageBox) return;
+
+            document.documentElement.style.setProperty('--photo-box-height', `${imageBox.clientHeight}px`);
+        }
+
+        // Load photo on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPhotoDetail();
+            setupAuthButton();
+            setupPhotoDragging();
+            syncDescriptionHeight();
+            window.addEventListener('resize', syncDescriptionHeight);
+        });
+    </script>
+</body>
+</html>

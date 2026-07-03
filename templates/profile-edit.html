@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Profile - My Media Hub</title>
+    <link rel="stylesheet" href="/mmh/static/css/style.css">
+    <link rel="stylesheet" href="/mmh/static/css/layout.css">
+    <link rel="stylesheet" href="/mmh/static/css/media-manager.css">
+    <style>
+        .profile-edit-shell {
+            max-width: 980px;
+            margin: 34px auto;
+            padding: 0 20px 44px;
+        }
+
+        .profile-edit-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .profile-edit-header h1 {
+            margin: 0;
+            color: #111827;
+            font-size: 28px;
+        }
+
+        .profile-edit-panel {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            gap: 28px;
+            padding: 28px;
+            border: 1px solid #e1e6ef;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: var(--shadow);
+        }
+
+        .avatar-editor {
+            display: grid;
+            align-content: start;
+            gap: 14px;
+        }
+
+        .avatar-preview {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #dbe4f0;
+            border: 1px solid #d9dee8;
+        }
+
+        .avatar-editor input[type="file"] {
+            max-width: 100%;
+        }
+
+        .profile-form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .profile-form-grid .full {
+            grid-column: 1 / -1;
+        }
+
+        .profile-form-grid textarea {
+            min-height: 128px;
+            resize: vertical;
+        }
+
+        .profile-edit-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .profile-status {
+            margin-right: auto;
+            color: #617086;
+            font-size: 14px;
+        }
+
+        .profile-status.error {
+            color: #b42318;
+        }
+
+        .profile-status.success {
+            color: #0f7a3a;
+        }
+
+        @media (max-width: 760px) {
+            .profile-edit-header,
+            .profile-edit-actions {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .profile-edit-panel,
+            .profile-form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="media-body">
+    <header class="media-header">
+        <a href="/mmh/" class="media-brand" aria-label="My Media Hub home">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 13a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-2v-2a4 4 0 0 0-8 0v2H3zm8-8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/>
+            </svg>
+            <span>My Media Hub</span>
+        </a>
+
+        <nav class="media-topnav" aria-label="Primary">
+            <a href="/mmh/">Library</a>
+            <a href="/mmh/my-media">My Media</a>
+            <a href="/mmh/profile/edit" aria-current="page">Edit Profile</a>
+        </nav>
+    </header>
+
+    <main class="profile-edit-shell">
+        <div class="profile-edit-header">
+            <div>
+                <h1>Edit profile</h1>
+                <p class="status-line">Update your account details and avatar.</p>
+            </div>
+            <a class="secondary-button" href="/mmh/my-media">Back to My Media</a>
+        </div>
+
+        <form id="profileForm" class="profile-edit-panel">
+            <section class="avatar-editor">
+                <img id="avatarPreview" class="avatar-preview" src="" alt="">
+                <div class="form-group">
+                    <label for="avatar">Avatar image</label>
+                    <input id="avatar" name="avatar" type="file" accept="image/png,image/jpeg,image/gif">
+                </div>
+                <div class="form-group">
+                    <label for="avatarUrl">Avatar URL</label>
+                    <input id="avatarUrl" name="avatar_url" type="url" placeholder="https://...">
+                </div>
+            </section>
+
+            <section>
+                <div class="profile-form-grid">
+                    <div class="form-group">
+                        <label for="name">Display name</label>
+                        <input id="name" name="name" type="text" autocomplete="nickname" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="realName">Real name</label>
+                        <input id="realName" name="real_name" type="text" autocomplete="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location">Location</label>
+                        <input id="location" name="location" type="text" autocomplete="address-level2">
+                    </div>
+                    <div class="form-group">
+                        <label for="website">Website</label>
+                        <input id="website" name="website" type="url" autocomplete="url">
+                    </div>
+                    <div class="form-group full">
+                        <label for="bio">Profile info</label>
+                        <textarea id="bio" name="bio"></textarea>
+                    </div>
+                </div>
+
+                <div class="profile-edit-actions">
+                    <span id="profileStatus" class="profile-status"></span>
+                    <button class="secondary-button" type="button" onclick="window.location.href='/mmh/my-media'">Cancel</button>
+                    <button id="saveProfile" class="primary-button" type="submit">Save profile</button>
+                </div>
+            </section>
+        </form>
+    </main>
+
+    <script src="/mmh/static/js/paths.js"></script>
+    <script>
+        const profileForm = document.getElementById('profileForm');
+        const avatarPreview = document.getElementById('avatarPreview');
+        const avatarInput = document.getElementById('avatar');
+        const avatarUrlInput = document.getElementById('avatarUrl');
+        const profileStatus = document.getElementById('profileStatus');
+        const saveProfile = document.getElementById('saveProfile');
+
+        document.addEventListener('DOMContentLoaded', loadProfile);
+
+        avatarPreview.addEventListener('error', () => {
+            const remoteAvatar = avatarUrlInput.value.trim();
+            if (remoteAvatar && avatarPreview.src !== remoteAvatar) {
+                avatarPreview.src = remoteAvatar;
+                return;
+            }
+            avatarPreview.src = avatarDataUri(document.getElementById('name').value);
+        });
+
+        avatarInput.addEventListener('change', () => {
+            const file = avatarInput.files[0];
+            if (file) avatarPreview.src = URL.createObjectURL(file);
+        });
+
+        avatarUrlInput.addEventListener('input', () => {
+            if (avatarUrlInput.value.trim()) avatarPreview.src = avatarUrlInput.value.trim();
+        });
+
+        profileForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            setStatus('Saving profile...');
+            saveProfile.disabled = true;
+
+            try {
+                const response = await fetch(appPath('/api/me'), {
+                    method: 'PUT',
+                    body: new FormData(profileForm)
+                });
+                if (!response.ok) throw new Error(await response.text());
+
+                const user = await response.json();
+                renderProfile(user);
+                setStatus('Profile saved.', 'success');
+            } catch (error) {
+                setStatus(error.message.trim() || 'Unable to save profile.', 'error');
+            } finally {
+                saveProfile.disabled = false;
+            }
+        });
+
+        async function loadProfile() {
+            try {
+                const response = await fetch(appPath('/api/me'));
+                if (response.status === 401) {
+                    window.location.href = appPath('/login');
+                    return;
+                }
+                if (!response.ok) throw new Error(await response.text());
+                renderProfile(await response.json());
+            } catch (error) {
+                setStatus(error.message.trim() || 'Unable to load profile.', 'error');
+            }
+        }
+
+        function renderProfile(user) {
+            document.getElementById('name').value = user.name || '';
+            document.getElementById('realName').value = user.real_name || '';
+            document.getElementById('location').value = user.location || '';
+            document.getElementById('website').value = user.website || '';
+            document.getElementById('bio').value = user.bio || '';
+            const avatarUrl = String(user.avatar_url || '').trim();
+            const hasLocalAvatar = avatarUrl.startsWith('/static/');
+            const remoteAvatar = hasLocalAvatar ? '' : avatarUrl;
+            avatarUrlInput.value = remoteAvatar;
+            avatarPreview.src = hasLocalAvatar
+                ? appPath(avatarUrl)
+                : remoteAvatar || avatarDataUri(user.name || user.username);
+        }
+
+        function setStatus(message, type = '') {
+            profileStatus.textContent = message;
+            profileStatus.className = `profile-status ${type}`.trim();
+        }
+
+        function avatarDataUri(name) {
+            const initial = encodeURIComponent(String(name || 'I').trim().slice(0, 1).toUpperCase() || 'I');
+            return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Crect width='160' height='160' rx='80' fill='%23dbeafe'/%3E%3Ctext x='80' y='96' text-anchor='middle' font-family='Arial' font-size='58' font-weight='700' fill='%231769ff'%3E${initial}%3C/text%3E%3C/svg%3E`;
+        }
+    </script>
+</body>
+</html>

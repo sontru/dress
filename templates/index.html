@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Media Hub</title>
+    <link rel="stylesheet" href="/mmh/static/css/style.css">
+    <link rel="stylesheet" href="/mmh/static/css/layout.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a href="/mmh/" class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24">
+                    <path d="M3 13a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-2v-2a4 4 0 0 0-8 0v2H3zm8-8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/>
+                </svg>
+                <span>My Media Hub</span>
+            </a>
+
+            <nav class="nav-menu">
+                <a href="/mmh/photos" class="nav-link">Photos</a>
+                <a href="#illustrations" class="nav-link">Illustrations</a>
+                <a href="#vectors" class="nav-link">Vectors</a>
+                <a href="#videos" class="nav-link">Videos</a>
+                <a href="#" class="nav-link">Collections</a>
+            </nav>
+
+            <div class="header-actions">
+                <div class="search-box">
+                    <input type="text" placeholder="Search for photos, vectors, videos and more" />
+                    <svg class="search-icon" viewBox="0 0 24 24">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <a href="/mmh/register" id="registerButton" class="explore-link" data-auth-register>Register</a>
+                <a href="#" class="cart-link">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m10 0h2m-11 0a2 2 0 11-4 0 2 2 0 014 0m12 0a2 2 0 11-4 0 2 2 0 014 0"/>
+                    </svg>
+                    <span class="cart-count">0</span>
+                </a>
+                <a href="/mmh/my-media" id="myMediaButton" class="sign-in" style="display: none; text-decoration: none;">My Media</a>
+                <a href="/mmh/login" id="authButton" class="sign-in" style="text-decoration: none;">Sign in</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="home-page">
+        <section class="home-hero">
+            <div class="home-hero-content">
+                <h1>Find the perfect image<br>for your next project</h1>
+                <p>Royalty-free photos, illustrations, vectors and videos to bring your ideas to life.</p>
+
+                <form class="home-search" action="/mmh/photos" method="get">
+                    <svg class="home-search-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <input type="search" name="q" placeholder="Search for images, vectors, videos and more..." aria-label="Search My Media Hub">
+                    <select name="type" aria-label="Media type">
+                        <option>Images</option>
+                        <option>Photos</option>
+                        <option>Illustrations</option>
+                        <option>Vectors</option>
+                        <option>Videos</option>
+                    </select>
+                    <button type="submit">Search</button>
+                </form>
+
+                <div class="popular-searches" aria-label="Popular searches">
+                    <span>Popular searches:</span>
+                    <a href="/mmh/photos">business</a>
+                    <a href="/mmh/photos">nature</a>
+                    <a href="/mmh/photos">technology</a>
+                    <a href="/mmh/photos">people</a>
+                    <a href="/mmh/photos">background</a>
+                    <a href="/mmh/photos">travel</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="home-section-grid" aria-label="My Media Hub sections">
+            <a class="home-section-card" href="/mmh/photos">
+                <img src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=700&q=80" alt="Outdoor photography preview">
+                <span>
+                    <strong>Photos</strong>
+                    <small>Browse photos</small>
+                </span>
+            </a>
+            <a class="home-section-card" id="illustrations" href="/mmh/photos">
+                <img src="/mmh/static/uploads/chatgpt-image-jul-2-2026-10-12-48-am-1783007578216994354-3f72990b0c1e.png" alt="Illustration preview">
+                <span>
+                    <strong>Illustrations</strong>
+                    <small>Creative artwork</small>
+                </span>
+            </a>
+            <a class="home-section-card" id="vectors" href="/mmh/photos">
+                <img src="https://images.unsplash.com/photo-1558655146-9f40138edfeb?auto=format&fit=crop&w=700&q=80" alt="Vector design preview">
+                <span>
+                    <strong>Vectors</strong>
+                    <small>Scalable graphics</small>
+                </span>
+            </a>
+            <a class="home-section-card" id="videos" href="/mmh/photos">
+                <img src="https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=700&q=80" alt="Video production preview">
+                <span>
+                    <strong>Videos</strong>
+                    <small>Motion clips</small>
+                </span>
+            </a>
+        </section>
+    </main>
+    <script src="/mmh/static/js/paths.js"></script>
+    <script src="/mmh/static/js/header-auth.js"></script>
+</body>
+</html>

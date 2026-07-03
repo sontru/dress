@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Media - My Media Hub</title>
+    <link rel="stylesheet" href="/mmh/static/css/style.css">
+    <link rel="stylesheet" href="/mmh/static/css/layout.css">
+    <link rel="stylesheet" href="/mmh/static/css/media-manager.css">
+</head>
+<body class="media-body">
+    <header class="header">
+        <div class="container">
+            <a href="/mmh/" class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24">
+                    <path d="M3 13a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-2v-2a4 4 0 0 0-8 0v2H3zm8-8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/>
+                </svg>
+                <span>My Media Hub</span>
+            </a>
+
+            <nav class="nav-menu">
+                <a href="/mmh/photos" class="nav-link">Photos</a>
+                <a href="/mmh/#illustrations" class="nav-link">Illustrations</a>
+                <a href="/mmh/#vectors" class="nav-link">Vectors</a>
+                <a href="/mmh/#videos" class="nav-link">Videos</a>
+                <a href="#" class="nav-link">Collections</a>
+            </nav>
+
+            <div class="header-actions">
+                <div class="search-box">
+                    <input id="managerSearch" type="search" placeholder="Search for photos, vectors, videos and more" autocomplete="off">
+                    <svg class="search-icon" viewBox="0 0 24 24">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <a href="#" class="cart-link">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m10 0h2m-11 0a2 2 0 11-4 0 2 2 0 014 0m12 0a2 2 0 11-4 0 2 2 0 014 0"/>
+                    </svg>
+                    <span class="cart-count">0</span>
+                </a>
+                <a href="/mmh/my-media" id="myMediaButton" class="sign-in" style="text-decoration: none;">My Media</a>
+                <a href="/mmh/login" id="authButton" class="sign-in" style="text-decoration: none;">Sign out</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="manager-layout">
+        <aside class="manager-sidebar">
+            <section class="profile-summary">
+                <img id="profileAvatar" src="" alt="">
+                <strong id="profileName">Loading...</strong>
+                <span id="profileSince">Member profile</span>
+                <a href="/mmh/profile/edit">Edit profile</a>
+            </section>
+
+            <nav class="side-nav" aria-label="Account">
+                <a href="#" class="active">
+                    <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10Zm10 8h8V3h-8v18ZM3 21h8v-6H3v6Z"/></svg>
+                    Dashboard
+                </a>
+                <a href="/mmh/my-media" class="selected">
+                    <svg viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14m18 0H3m18 0-5-6-4 5-3-4-6 5"/></svg>
+                    My Media
+                </a>
+                <a href="#">
+                    <svg viewBox="0 0 24 24"><path d="M3 7h18M5 7v12h14V7M8 7V5h8v2"/></svg>
+                    Collections
+                </a>
+                <a href="#">
+                    <svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    Sales & Earnings
+                </a>
+                <a href="#">
+                    <svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h17M8 16v-5M13 16V8M18 16v-3"/></svg>
+                    Analytics
+                </a>
+                <a href="#">
+                    <svg viewBox="0 0 24 24"><path d="M5 8h14v12H5zM8 8V6a4 4 0 0 1 8 0v2"/></svg>
+                    Licenses
+                </a>
+                <a href="#">
+                    <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4zM8 10h8M8 14h5"/></svg>
+                    Messages
+                </a>
+                <a href="#">
+                    <svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 2-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V20h-4v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-2-2 .1-.1A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.5-1H3v-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1 2-2 .1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V4h4v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2 2-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1v4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+                    Settings
+                </a>
+            </nav>
+
+            <section class="storage-widget">
+                <strong>Storage</strong>
+                <div class="storage-track"><span></span></div>
+                <p><span id="storageUsed">0</span> of 20 GB used</p>
+                <a href="#">Upgrade storage</a>
+            </section>
+        </aside>
+
+        <main class="manager-main">
+            <div class="manager-heading">
+                <div>
+                    <h1>My Media</h1>
+                    <p>Upload, manage and sell your content</p>
+                </div>
+                <div class="heading-actions">
+                    <button id="createCategoryTop" class="secondary-button" type="button">
+                        <svg viewBox="0 0 24 24"><path d="M3 7h18v13H3zM7 7V4h10v3M12 11v5M9.5 13.5h5"/></svg>
+                        Create category
+                    </button>
+                    <button id="uploadMediaTop" class="primary-button" type="button">
+                        <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v4h16v-4"/></svg>
+                        Upload media
+                    </button>
+                </div>
+            </div>
+
+            <div class="media-tabs" role="tablist" aria-label="Media types">
+                <button class="media-tab active" type="button" data-type="photos" role="tab" aria-selected="true">
+                    <svg viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14m18 0H3m18 0-5-6-4 5-3-4-6 5"/></svg>
+                    Photos
+                </button>
+                <button class="media-tab" type="button" data-type="illustrations" role="tab" aria-selected="false">
+                    <svg viewBox="0 0 24 24"><path d="m3 21 3.5-1 11-11-2.5-2.5-11 11L3 21ZM14 5.5 16.5 8 19 5.5 16.5 3 14 5.5Z"/></svg>
+                    Illustrations
+                </button>
+                <button class="media-tab" type="button" data-type="vectors" role="tab" aria-selected="false">
+                    <svg viewBox="0 0 24 24"><path d="M4 20 20 4M8 4h12v12M4 8h4v4H4zM12 16h4v4h-4z"/></svg>
+                    Vectors
+                </button>
+                <button class="media-tab" type="button" data-type="videos" role="tab" aria-selected="false">
+                    <svg viewBox="0 0 24 24"><path d="M4 6h12v12H4zM16 10l5-3v10l-5-3"/></svg>
+                    Videos
+                </button>
+            </div>
+
+            <section class="manager-content">
+                <form id="uploadForm" class="upload-card">
+                    <div class="card-heading">
+                        <h2 id="uploadTitle">Upload Photos</h2>
+                        <p id="uploadHint">Add single photos or upload in bulk</p>
+                    </div>
+
+                    <label id="dropZone" class="drop-zone-manager" for="mediaInput">
+                        <input id="mediaInput" name="photo" type="file" accept="image/png,image/jpeg,image/gif" multiple>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v4h16v-4"/></svg>
+                        <strong id="dropTitle">Drag and drop photos here</strong>
+                        <span id="dropSubtitle">PNG, JPEG or GIF up to 20MB each</span>
+                        <em>Select files</em>
+                    </label>
+
+                    <div id="fileQueue" class="file-queue" hidden></div>
+
+                    <fieldset class="upload-options">
+                        <legend>Upload options</legend>
+                        <label><input type="radio" name="uploadMode" value="single" checked> Upload individual item</label>
+                        <label><input type="radio" name="uploadMode" value="bulk"> Upload multiple items in bulk</label>
+                    </fieldset>
+
+                    <div class="form-stack">
+                        <label>
+                            Title
+                            <input id="mediaTitle" name="title" type="text" placeholder="Formal evening gowns">
+                        </label>
+                        <label>
+                            Description
+                            <textarea id="mediaDescription" name="description" rows="3" placeholder="Describe usage, style, mood and details"></textarea>
+                        </label>
+                        <label>
+                            Category
+                            <select id="mediaCategory" name="user_category"></select>
+                        </label>
+                        <label>
+                            My Media Hub category
+                            <input id="hubCategory" name="category" type="text" value="Photos" readonly aria-readonly="true">
+                        </label>
+                        <label>
+                            Tags
+                            <input id="mediaTags" name="tags" type="text" placeholder="fashion, evening, satin">
+                        </label>
+                        <div class="split-fields">
+                            <label>
+                                Price
+                                <span class="money-input"><span>$</span><input id="mediaPrice" name="price" type="number" min="0" step="0.01" value="29.99"></span>
+                            </label>
+                            <label>
+                                License
+                                <select id="mediaLicense">
+                                    <option>Standard License</option>
+                                    <option>Extended License</option>
+                                    <option>Editorial Use</option>
+                                </select>
+                            </label>
+                        </div>
+                        <label class="checkbox-line watermark-toggle">
+                            <input id="mediaWatermark" name="apply_watermark" type="checkbox">
+                            <span>Apply watermark</span>
+                        </label>
+                        <label id="watermarkFileField" class="watermark-file-field" hidden>
+                            Watermark file
+                            <input id="watermarkFile" name="watermark" type="file" accept="image/png,image/jpeg,image/gif">
+                        </label>
+                    </div>
+
+                    <button id="startUpload" class="primary-button wide" type="submit">Start upload</button>
+                    <p id="uploadStatus" class="status-line" aria-live="polite"></p>
+                </form>
+
+                <section class="library-card">
+                    <div class="library-toolbar">
+                        <div>
+                            <h2 id="manageTitle">Manage your photos</h2>
+                            <p id="manageSummary">Loading your media</p>
+                        </div>
+                        <div class="toolbar-actions">
+                            <button id="filterButton" class="secondary-button compact" type="button">
+                                <svg viewBox="0 0 24 24"><path d="M4 5h16l-6 7v5l-4 2v-7L4 5Z"/></svg>
+                                Filter
+                            </button>
+                            <select id="sortSelect" class="select-button" aria-label="Sort media">
+                                <option value="newest">Newest first</option>
+                                <option value="title">Title</option>
+                                <option value="price">Price</option>
+                            </select>
+                            <button id="gridView" class="icon-button selected" type="button" title="Grid view" aria-label="Grid view">
+                                <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+                            </button>
+                            <button id="listView" class="icon-button" type="button" title="List view" aria-label="List view">
+                                <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h1M3 12h1M3 18h1"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="mediaTable" class="media-table"></div>
+
+                    <div class="bulk-bar">
+                        <span><strong id="selectedCount">0</strong> selected</span>
+                        <button id="selectAllButton" class="text-button" type="button">Select all</button>
+                        <button id="bulkEditButton" class="secondary-button compact" type="button" disabled>Edit</button>
+                        <select id="bulkCategorySelect" class="select-button" disabled aria-label="Move selected to category"></select>
+                        <button id="bulkDeleteButton" class="secondary-button compact danger" type="button" disabled>Delete</button>
+                    </div>
+                </section>
+            </section>
+
+            <section class="categories-card">
+                <div class="card-heading">
+                    <h2>Your Categories</h2>
+                    <p id="categorySummary">Manage your content categories</p>
+                </div>
+                <div id="categoryList" class="category-list"></div>
+            </section>
+        </main>
+    </div>
+
+    <dialog id="editDialog" class="manager-dialog">
+        <form id="editForm" method="dialog">
+            <div class="dialog-header">
+                <h2>Edit media</h2>
+                <button class="icon-button" type="button" data-close-dialog aria-label="Close editor">
+                    <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <input id="editId" type="hidden">
+            <label>Title<input id="editTitle" type="text" required></label>
+            <label>Description<textarea id="editDescription" rows="4"></textarea></label>
+            <label>Category<select id="editCategory"></select></label>
+            <label>My Media Hub category<input id="editHubCategory" type="text"></label>
+            <label>Price<input id="editPrice" type="number" min="0" step="0.01"></label>
+            <label class="checkbox-line"><input id="editIsPublic" type="checkbox"> Published</label>
+            <div class="dialog-actions">
+                <button class="secondary-button" type="button" data-close-dialog>Cancel</button>
+                <button class="primary-button" type="submit">Save changes</button>
+            </div>
+            <p id="editStatus" class="status-line" aria-live="polite"></p>
+        </form>
+    </dialog>
+
+    <dialog id="categoryDialog" class="manager-dialog small-dialog">
+        <form id="categoryForm" method="dialog">
+            <div class="dialog-header">
+                <h2>Create category</h2>
+                <button class="icon-button" type="button" data-close-dialog aria-label="Close category form">
+                    <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <label>Category name<input id="newCategoryName" type="text" placeholder="Evening Wear" required></label>
+            <div class="dialog-actions">
+                <button class="secondary-button" type="button" data-close-dialog>Cancel</button>
+                <button class="primary-button" type="submit">Create</button>
+            </div>
+            <p id="categoryStatus" class="status-line" aria-live="polite"></p>
+        </form>
+    </dialog>
+
+    <script src="/mmh/static/js/paths.js"></script>
+    <script src="/mmh/static/js/header-auth.js"></script>
+    <script src="/mmh/static/js/media-manager.js"></script>
+</body>
+</html>

@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Media - My Media Hub</title>
+    <link rel="stylesheet" href="/mmh/static/css/style.css">
+    <link rel="stylesheet" href="/mmh/static/css/layout.css">
+    <style>
+        body {
+            background: #f5f6f8;
+        }
+
+        .upload-shell {
+            max-width: 1180px;
+            margin: 28px auto;
+            padding: 0 20px 40px;
+        }
+
+        .upload-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 22px;
+        }
+
+        .upload-topbar h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 650;
+            color: #1f2933;
+        }
+
+        .upload-userline {
+            margin-top: 4px;
+            color: #53606d;
+            font-size: 14px;
+        }
+
+        .upload-link {
+            color: var(--primary-color);
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .upload-layout {
+            display: grid;
+            grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
+            gap: 22px;
+            align-items: start;
+        }
+
+        .upload-panel,
+        .details-panel {
+            background: #fff;
+            border: 1px solid #dde2e7;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .panel-section {
+            padding: 20px;
+            border-bottom: 1px solid #e8edf2;
+        }
+
+        .panel-section:last-child {
+            border-bottom: 0;
+        }
+
+        .panel-section h2 {
+            margin: 0 0 14px;
+            font-size: 16px;
+            font-weight: 650;
+            color: #1f2933;
+        }
+
+        .drop-zone {
+            position: relative;
+            display: grid;
+            place-items: center;
+            min-height: 290px;
+            background: #f9fafb;
+            border: 1px dashed #b9c3cf;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .drop-zone input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .drop-copy {
+            text-align: center;
+            padding: 24px;
+            color: #53606d;
+        }
+
+        .drop-copy strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #1f2933;
+            font-size: 16px;
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 100%;
+            max-height: 420px;
+            object-fit: contain;
+            display: none;
+            background: #111827;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: #fff;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .form-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 18px 20px;
+            border-top: 1px solid #e8edf2;
+        }
+
+        .status-message {
+            flex: 1;
+            min-height: 20px;
+            color: #53606d;
+            font-size: 14px;
+        }
+
+        .status-message.success {
+            color: #1b7f3a;
+        }
+
+        .status-message.error {
+            color: #b42318;
+        }
+
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .upload-panel .metadata-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .metadata-item {
+            min-height: 74px;
+            padding: 12px;
+            background: #f9fafb;
+            border: 1px solid #e8edf2;
+            border-radius: 6px;
+        }
+
+        .metadata-item label {
+            display: block;
+            margin-bottom: 6px;
+            color: #66727f;
+            font-size: 12px;
+            font-weight: 650;
+            text-transform: uppercase;
+        }
+
+        .metadata-item span {
+            color: #1f2933;
+            font-size: 15px;
+            font-weight: 600;
+            overflow-wrap: anywhere;
+        }
+
+        .result-link {
+            display: none;
+            margin-top: 16px;
+            color: var(--primary-color);
+            font-weight: 650;
+            text-decoration: none;
+        }
+
+        .owned-photo-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .owned-photo {
+            display: grid;
+            grid-template-columns: 54px minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+            padding: 10px;
+            background: #f9fafb;
+            border: 1px solid #e8edf2;
+            border-radius: 6px;
+        }
+
+        .owned-photo img {
+            width: 54px;
+            height: 54px;
+            object-fit: cover;
+            border-radius: 4px;
+            background: #dde2e7;
+        }
+
+        .owned-photo strong {
+            display: block;
+            color: #1f2933;
+            font-size: 14px;
+            overflow-wrap: anywhere;
+        }
+
+        .owned-photo span {
+            color: #66727f;
+            font-size: 13px;
+        }
+
+        .owned-photo a {
+            color: var(--primary-color);
+            font-size: 13px;
+            font-weight: 650;
+            text-decoration: none;
+        }
+
+        @media (max-width: 860px) {
+            .upload-layout,
+            .form-grid,
+            .metadata-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .upload-topbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24">
+                    <path d="M3 13a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-2v-2a4 4 0 0 0-8 0v2H3zm8-8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/>
+                </svg>
+                <span>My Media Hub</span>
+            </div>
+            <nav class="nav-menu">
+                <a href="/mmh/" class="nav-link">Library</a>
+                <a href="/mmh/my-media" class="nav-link">My Media</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="upload-shell">
+        <div class="upload-topbar">
+            <div>
+                <h1>Upload Media</h1>
+                <div id="uploadUserline" class="upload-userline">Loading account...</div>
+            </div>
+            <a class="upload-link" href="/mmh/">Back to library</a>
+        </div>
+
+        <form id="uploadForm" class="upload-layout">
+            <section class="upload-panel">
+                <div class="panel-section">
+                    <h2 id="uploadOwner">Media file</h2>
+                    <label class="drop-zone" for="photoInput">
+                        <input id="photoInput" name="photo" type="file" accept="image/png,image/jpeg,image/gif" required>
+                        <img id="previewImage" class="preview-image" alt="Selected media preview">
+                        <span id="dropCopy" class="drop-copy">
+                            <strong>Select media</strong>
+                            Images are supported now. PNG, JPEG, or GIF up to 20MB.
+                        </span>
+                    </label>
+                </div>
+
+                <div class="panel-section">
+                    <h2>Creator</h2>
+                    <div class="form-group">
+                        <label for="photographer">Creator</label>
+                        <input id="photographer" name="photographer" type="text">
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h2>My Media Hub Category</h2>
+                    <div class="form-group">
+                        <label for="category">My Media Hub category</label>
+                        <input id="category" name="category" type="text" list="imagehubCategories" placeholder="Default">
+                        <datalist id="imagehubCategories"></datalist>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h2>Extracted Media Data</h2>
+                    <div class="metadata-grid">
+                        <div class="metadata-item">
+                            <label>Size</label>
+                            <span id="metaSize">Waiting for upload</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>Dimensions</label>
+                            <span id="metaDimensions">Waiting for upload</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>Type</label>
+                            <span id="metaType">Waiting for upload</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>Orientation</label>
+                            <span id="metaOrientation">Waiting for upload</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>Color mode</label>
+                            <span id="metaColor">Waiting for upload</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>Stored path</label>
+                            <span id="metaPath">Waiting for upload</span>
+                        </div>
+                    </div>
+                    <a id="resultLink" class="result-link" href="#">Open media detail</a>
+                </div>
+            </section>
+
+            <section class="details-panel">
+                <div class="panel-section">
+                    <h2>Details</h2>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="title">Title</label>
+                            <input id="title" name="title" type="text" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="userCategory">User category</label>
+                            <select id="userCategory" name="user_category"></select>
+                        </div>
+                        <div class="form-group full">
+                            <label for="description">Detail description</label>
+                            <textarea id="description" name="description"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="tags">Tags</label>
+                            <input id="tags" name="tags" type="text" placeholder="fashion, evening, satin">
+                        </div>
+                        <div class="form-group">
+                            <label for="price">Price</label>
+                            <input id="price" name="price" type="number" min="0" step="0.01" value="29.99">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-section">
+                    <h2>Your Media</h2>
+                    <div id="ownedPhotoList" class="owned-photo-list">
+                        <div class="metadata-item">
+                            <span>Loading your media</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <div id="statusMessage" class="status-message"></div>
+                    <button id="submitButton" type="submit" class="btn-primary">Upload media</button>
+                </div>
+            </section>
+        </form>
+    </main>
+
+    <script src="/mmh/static/js/paths.js"></script>
+    <script>
+        const uploadForm = document.getElementById('uploadForm');
+        const photoInput = document.getElementById('photoInput');
+        const previewImage = document.getElementById('previewImage');
+        const dropCopy = document.getElementById('dropCopy');
+        const statusMessage = document.getElementById('statusMessage');
+        const submitButton = document.getElementById('submitButton');
+        const resultLink = document.getElementById('resultLink');
+        const uploadUserline = document.getElementById('uploadUserline');
+        const uploadOwner = document.getElementById('uploadOwner');
+        const ownedPhotoList = document.getElementById('ownedPhotoList');
+        const categoryInput = document.getElementById('category');
+        const userCategorySelect = document.getElementById('userCategory');
+        const photographerInput = document.getElementById('photographer');
+
+        const metadataFields = {
+            size: document.getElementById('metaSize'),
+            dimensions: document.getElementById('metaDimensions'),
+            type: document.getElementById('metaType'),
+            orientation: document.getElementById('metaOrientation'),
+            color: document.getElementById('metaColor'),
+            path: document.getElementById('metaPath')
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCurrentUser();
+            loadCategoryOptions();
+            loadImageHubCategories();
+            loadOwnedPhotos();
+        });
+
+        photoInput.addEventListener('change', () => {
+            const file = photoInput.files[0];
+            if (!file) return;
+
+            document.getElementById('title').value = titleFromFilename(file.name);
+            previewImage.src = URL.createObjectURL(file);
+            previewImage.style.display = 'block';
+            dropCopy.style.display = 'none';
+
+        });
+
+        userCategorySelect.addEventListener('change', rememberAdminDefaults);
+        photographerInput.addEventListener('change', rememberAdminDefaults);
+
+        uploadForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            setStatus('Uploading media...', '');
+            submitButton.disabled = true;
+            resultLink.style.display = 'none';
+
+            try {
+                const response = await fetch(appPath('/api/admin/photos/upload'), {
+                    method: 'POST',
+                    body: new FormData(uploadForm)
+                });
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+
+                const media = await response.json();
+                metadataFields.size.textContent = media.file_size || 'Unknown';
+                metadataFields.dimensions.textContent = media.dimensions || 'Unknown';
+                metadataFields.type.textContent = media.file_type || 'Unknown';
+                metadataFields.orientation.textContent = media.orientation || 'Unknown';
+                metadataFields.color.textContent = media.color_mode || 'Unknown';
+                metadataFields.path.textContent = media.image_path || 'Unknown';
+
+                resultLink.href = appPath(`/photo/${media.id}`);
+                resultLink.style.display = 'inline-block';
+                rememberAdminDefaults();
+                loadCategoryOptions();
+                loadOwnedPhotos();
+                setStatus('Media uploaded and saved.', 'success');
+            } catch (error) {
+                setStatus(error.message.trim() || 'Upload failed.', 'error');
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+
+        async function loadCategoryOptions() {
+            try {
+                const response = await fetch(appPath('/api/admin/categories'));
+                if (response.status === 401) {
+                    window.location.href = appPath('/login');
+                    return;
+                }
+                const categories = await response.json();
+                const rememberedCategory = localStorage.getItem('imagehubUserCategory') || 'Default';
+                userCategorySelect.innerHTML = categories
+                    .map((category) => `<option value="${escapeHtml(category.name)}">${escapeHtml(category.name)}</option>`)
+                    .join('');
+                if (categories.some((category) => category.name === rememberedCategory)) {
+                    userCategorySelect.value = rememberedCategory;
+                } else if (userCategorySelect.options.length) {
+                    userCategorySelect.value = userCategorySelect.options[0].value;
+                }
+            } catch (error) {
+                console.error('Unable to load categories', error);
+            }
+        }
+
+        async function loadImageHubCategories() {
+            try {
+                const response = await fetch(appPath('/api/categories'));
+                const categories = await response.json();
+                document.getElementById('imagehubCategories').innerHTML = categories
+                    .map((category) => `<option value="${escapeHtml(category.name)}"></option>`)
+                    .join('');
+            } catch (error) {
+                console.error('Unable to load My Media Hub categories', error);
+            }
+        }
+
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch(appPath('/api/me'));
+                if (response.status === 401) {
+                    window.location.href = appPath('/login');
+                    return;
+                }
+
+                const user = await response.json();
+                const username = user.username || user.name || 'your account';
+                const memberName = user.real_name || user.name || username;
+                const memberSince = user.member_since || 'unknown';
+                uploadUserline.textContent = `Member ${memberName} | Member since ${memberSince} | Uploading under @${username}`;
+                uploadOwner.textContent = `Media for @${username}`;
+                photographerInput.value = localStorage.getItem('imagehubPhotographer') || user.name || memberName;
+            } catch (error) {
+                uploadUserline.textContent = 'Unable to load account';
+            }
+        }
+
+        function rememberAdminDefaults() {
+            if (userCategorySelect.value) {
+                localStorage.setItem('imagehubUserCategory', userCategorySelect.value);
+            }
+            if (photographerInput.value.trim()) {
+                localStorage.setItem('imagehubPhotographer', photographerInput.value.trim());
+            }
+        }
+
+        async function loadOwnedPhotos() {
+            try {
+                const response = await fetch(appPath('/api/admin/photos'));
+                if (response.status === 401) {
+                    window.location.href = appPath('/login');
+                    return;
+                }
+
+                const mediaItems = await response.json();
+                if (!mediaItems.length) {
+                    ownedPhotoList.innerHTML = `
+                        <div class="metadata-item">
+                            <span>No media uploaded yet</span>
+                        </div>
+                    `;
+                    return;
+                }
+
+                ownedPhotoList.innerHTML = mediaItems.map((photo) => `
+                    <div class="owned-photo">
+                        <img src="${escapeHtml(appPath(photo.thumbnail || photo.image_path))}" alt="">
+                        <div>
+                            <strong>${escapeHtml(capitalizeFirstWord(photo.title))}</strong>
+                            <span>${escapeHtml(photo.user_category || 'Default')}</span>
+                        </div>
+                        <a href="${appPath(`/photo/${photo.id}`)}">Open</a>
+                    </div>
+                `).join('');
+            } catch (error) {
+                ownedPhotoList.innerHTML = `
+                    <div class="metadata-item">
+                        <span>Unable to load your media</span>
+                    </div>
+                `;
+            }
+        }
+
+        function setStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message ${type}`;
+        }
+
+        function titleFromFilename(filename) {
+            return String(filename || '')
+                .replace(/\.[^.]+$/, '')
+                .replace(/[-_]+/g, ' ')
+                .replace(/\b\w/g, (letter) => letter.toUpperCase());
+        }
+
+        function capitalizeFirstWord(value) {
+            const title = String(value || '');
+            return title.replace(/^(\s*)(\S)/, (_, leadingSpace, firstLetter) => leadingSpace + firstLetter.toUpperCase());
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[char]));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - My Media Hub</title>
+    <link rel="stylesheet" href="/mmh/static/css/style.css">
+    <link rel="stylesheet" href="/mmh/static/css/layout.css">
+    <style>
+        body {
+            background: #f5f6f8;
+        }
+
+        .auth-shell {
+            max-width: 460px;
+            margin: 46px auto;
+            padding: 0 20px;
+        }
+
+        .auth-panel {
+            background: #fff;
+            border: 1px solid #dde2e7;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 24px;
+        }
+
+        .auth-panel h1 {
+            margin: 0 0 18px;
+            color: #1f2933;
+            font-size: 26px;
+            font-weight: 650;
+        }
+
+        .auth-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-top: 20px;
+        }
+
+        .auth-link {
+            color: var(--primary-color);
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .auth-status {
+            min-height: 20px;
+            margin-top: 14px;
+            color: #b42318;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a class="logo" href="/mmh/" style="text-decoration: none; color: inherit;">
+                <svg class="logo-icon" viewBox="0 0 24 24">
+                    <path d="M3 13a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-2v-2a4 4 0 0 0-8 0v2H3zm8-8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/>
+                </svg>
+                <span>My Media Hub</span>
+            </a>
+            <nav class="nav-menu">
+                <a href="/mmh/" class="nav-link">Library</a>
+                <a href="/mmh/register" class="nav-link" data-auth-register>Register</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="auth-shell">
+        <section class="auth-panel">
+            <h1>Login</h1>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="login">Email or username</label>
+                    <input id="login" name="login" type="text" autocomplete="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password" required>
+                </div>
+                <div id="authStatus" class="auth-status"></div>
+                <div class="auth-actions">
+                    <a class="auth-link" href="/mmh/register" data-auth-register>Create account</a>
+                    <button id="submitButton" type="submit" class="btn-primary">Login</button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script src="/mmh/static/js/paths.js"></script>
+    <script src="/mmh/static/js/header-auth.js"></script>
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const authStatus = document.getElementById('authStatus');
+        const submitButton = document.getElementById('submitButton');
+
+        loginForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            authStatus.textContent = '';
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch(appPath('/api/login'), {
+                    method: 'POST',
+                    body: new FormData(loginForm)
+                });
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+
+                window.location.href = appPath('/');
+            } catch (error) {
+                authStatus.textContent = error.message.trim() || 'Login failed.';
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

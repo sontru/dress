@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - My Media Hub</title>
+    <link rel="stylesheet" href="/mmh/static/css/style.css">
+    <link rel="stylesheet" href="/mmh/static/css/layout.css">
+    <style>
+        body {
+            background: #f5f6f8;
+        }
+
+        .register-shell {
+            max-width: 860px;
+            margin: 34px auto;
+            padding: 0 20px 44px;
+        }
+
+        .register-panel {
+            background: #fff;
+            border: 1px solid #dde2e7;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .register-header {
+            padding: 22px 24px;
+            border-bottom: 1px solid #e8edf2;
+        }
+
+        .register-header h1 {
+            margin: 0;
+            color: #1f2933;
+            font-size: 26px;
+            font-weight: 650;
+        }
+
+        .register-body {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+            padding: 24px;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .register-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 18px 24px;
+            border-top: 1px solid #e8edf2;
+        }
+
+        .auth-link {
+            color: var(--primary-color);
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .auth-status {
+            min-height: 20px;
+            color: #b42318;
+            font-size: 14px;
+        }
+
+        @media (max-width: 720px) {
+            .register-body {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <a class="logo" href="/mmh/" style="text-decoration: none; color: inherit;">
+                <svg class="logo-icon" viewBox="0 0 24 24">
+                    <path d="M3 13a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-2v-2a4 4 0 0 0-8 0v2H3zm8-8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/>
+                </svg>
+                <span>My Media Hub</span>
+            </a>
+            <nav class="nav-menu">
+                <a href="/mmh/" class="nav-link">Library</a>
+                <a href="/mmh/login" class="nav-link">Login</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="register-shell">
+        <section class="register-panel">
+            <div class="register-header">
+                <h1>Create Account</h1>
+            </div>
+
+            <form id="registerForm">
+                <div class="register-body">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input id="username" name="username" type="text" autocomplete="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input id="email" name="email" type="email" autocomplete="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="name">Display name</label>
+                        <input id="name" name="name" type="text" autocomplete="nickname" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="realName">Real name</label>
+                        <input id="realName" name="real_name" type="text" autocomplete="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="location">Location</label>
+                        <input id="location" name="location" type="text" autocomplete="address-level2">
+                    </div>
+                    <div class="form-group">
+                        <label for="website">Website</label>
+                        <input id="website" name="website" type="url" autocomplete="url">
+                    </div>
+                    <div class="form-group">
+                        <label for="avatarUrl">Avatar URL</label>
+                        <input id="avatarUrl" name="avatar_url" type="url">
+                    </div>
+                    <div class="form-group full">
+                        <label for="bio">Profile info</label>
+                        <textarea id="bio" name="bio"></textarea>
+                    </div>
+                    <div id="authStatus" class="auth-status full"></div>
+                </div>
+
+                <div class="register-actions">
+                    <a class="auth-link" href="/mmh/login">Already have an account?</a>
+                    <button id="submitButton" type="submit" class="btn-primary">Create account</button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script src="/mmh/static/js/paths.js"></script>
+    <script>
+        const registerForm = document.getElementById('registerForm');
+        const authStatus = document.getElementById('authStatus');
+        const submitButton = document.getElementById('submitButton');
+
+        registerForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            authStatus.textContent = '';
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch(appPath('/api/register'), {
+                    method: 'POST',
+                    body: new FormData(registerForm)
+                });
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+
+                window.location.href = appPath('/');
+            } catch (error) {
+                authStatus.textContent = error.message.trim() || 'Registration failed.';
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
