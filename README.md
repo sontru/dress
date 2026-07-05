@@ -1,6 +1,6 @@
 # Photo Library Web Application
 
-A modern photo library web application built with Golang and SQLite, featuring photo discovery, categorization, collection management, and shopping cart functionality. The UI design is inspired by My Media Hub, offering a clean and intuitive interface for browsing and purchasing photos.
+A modern photo library web application built with Golang and SQLite, featuring photo discovery, categorization, collection management, and media likes. The UI design is inspired by My Media Hub, offering a clean and intuitive interface for browsing and saving media.
 
 ## Features
 
@@ -10,7 +10,7 @@ A modern photo library web application built with Golang and SQLite, featuring p
 - **Categorization**: Organize photos by categories
 - **Tagging System**: Filter photos by multiple tags
 - **Collections**: Create and manage personal photo collections
-- **Shopping Cart**: Add photos to cart and prepare for checkout
+- **Likes**: Logged-in users can like each media item once
 - **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
 
 ### Technical Features
@@ -112,10 +112,9 @@ export ENVIRONMENT=production
 - `GET /api/collections/{id}` - Get collection details
 - `POST /api/collections/{id}/add` - Add photo to collection
 
-### Cart
-- `GET /api/cart?user_id=1` - Get cart items
-- `POST /api/cart/add` - Add item to cart
-- `DELETE /api/cart/remove/{id}` - Remove item from cart
+### Likes
+- `POST /api/images/{id}/like` - Like an image
+- `DELETE /api/images/{id}/like` - Remove the current user's like
 
 ## Database Schema
 
@@ -125,7 +124,7 @@ export ENVIRONMENT=production
 ```sql
 id, title, description, image_path, thumbnail, category, 
 dimensions, file_type, file_size, orientation, resolution, 
-color_mode, photographer, member_since, price, created_at, updated_at
+color_mode, photographer, created_at, updated_at
 ```
 
 **tags** - Photo tags/keywords
@@ -153,9 +152,9 @@ id, name, description, user_id, created_at, updated_at
 collection_id, photo_id, added_at
 ```
 
-**cart_items** - Shopping cart
+**image_likes** - User media likes
 ```sql
-id, user_id, photo_id, quantity, price, added_at
+id, user_id, image_id, added_at
 ```
 
 **users** - User accounts
@@ -174,7 +173,6 @@ id, email, name, created_at
 - Real-time search input
 - Category filtering
 - Multi-tag filtering
-- Price range slider
 - Pagination controls
 
 ### Photo Detail Modal
@@ -183,7 +181,7 @@ id, email, name, created_at
 - Photographer information
 - Keywords/tags display
 - Add to collection button
-- Add to cart button
+- Like button and like count
 
 ### Collections
 - Create new collections
@@ -191,11 +189,10 @@ id, email, name, created_at
 - Add photos to collections
 - Collections sidebar with quick access
 
-### Shopping Cart
-- View cart items
-- Remove items
-- Display total price
-- Quantity tracking
+### Likes
+- Like or unlike media
+- Show like totals
+- One like per logged-in user per media item
 
 ## Styling
 
@@ -249,8 +246,8 @@ curl -X POST http://localhost:8082/api/photos \
     "resolution": "300 DPI",
     "color_mode": "RGB",
     "photographer": "Alex Morgan",
-    "member_since": "May 2016",
-    "price": 29.99
+    "like_count": 0,
+    "liked_by_user": false
   }'
 ```
 
@@ -283,7 +280,7 @@ curl -X POST http://localhost:8082/api/photos \
 - Check database file path
 
 ### Database errors
-- Delete `photo_library.db` and restart to reset database
+- Delete `media_hub.db` and restart to reset database
 - Check file permissions in the application directory
 
 ### Images not loading

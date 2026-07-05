@@ -320,7 +320,7 @@
                     <h2>My Media Hub Category</h2>
                     <div class="form-group">
                         <label for="category">My Media Hub category</label>
-                        <input id="category" name="category" type="text" list="imagehubCategories" placeholder="Default">
+                        <input id="category" name="category" type="text" list="imagehubCategories" value="Photos" placeholder="Photos">
                         <datalist id="imagehubCategories"></datalist>
                     </div>
                 </div>
@@ -329,24 +329,36 @@
                     <h2>Extracted Media Data</h2>
                     <div class="metadata-grid">
                         <div class="metadata-item">
-                            <label>Size</label>
-                            <span id="metaSize">Waiting for upload</span>
+                            <label>Date and time</label>
+                            <span id="metaCapturedAt">Waiting for upload</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>Location</label>
+                            <span id="metaPhotoLocation">Waiting for upload</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>Camera</label>
+                            <span id="metaCamera">Waiting for upload</span>
                         </div>
                         <div class="metadata-item">
                             <label>Dimensions</label>
                             <span id="metaDimensions">Waiting for upload</span>
                         </div>
                         <div class="metadata-item">
-                            <label>Type</label>
+                            <label>File name</label>
+                            <span id="metaFileName">Waiting for upload</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>File size</label>
+                            <span id="metaSize">Waiting for upload</span>
+                        </div>
+                        <div class="metadata-item">
+                            <label>File format</label>
                             <span id="metaType">Waiting for upload</span>
                         </div>
                         <div class="metadata-item">
-                            <label>Orientation</label>
-                            <span id="metaOrientation">Waiting for upload</span>
-                        </div>
-                        <div class="metadata-item">
-                            <label>Color mode</label>
-                            <span id="metaColor">Waiting for upload</span>
+                            <label>Focal length</label>
+                            <span id="metaFocalLength">Waiting for upload</span>
                         </div>
                         <div class="metadata-item">
                             <label>Stored path</label>
@@ -378,9 +390,18 @@
                             <input id="tags" name="tags" type="text" placeholder="fashion, evening, satin">
                         </div>
                         <div class="form-group">
-                            <label for="price">Price</label>
-                            <input id="price" name="price" type="number" min="0" step="0.01" value="29.99">
+                            <label for="capturedAt">Time</label>
+                            <input id="capturedAt" name="captured_at" type="text" placeholder="2026-07-04 10:30">
                         </div>
+                        <div class="form-group">
+                            <label for="photoLocation">Location</label>
+                            <input id="photoLocation" name="photo_location" type="text" placeholder="London, UK">
+                        </div>
+                        <div class="form-group">
+                            <label for="focalLength">Focal length</label>
+                            <input id="focalLength" name="focal_length" type="text" placeholder="50mm">
+                        </div>
+                        <input id="camera" name="camera" type="hidden">
                     </div>
                 </div>
 
@@ -418,11 +439,14 @@
         const photographerInput = document.getElementById('photographer');
 
         const metadataFields = {
+            fileName: document.getElementById('metaFileName'),
             size: document.getElementById('metaSize'),
             dimensions: document.getElementById('metaDimensions'),
             type: document.getElementById('metaType'),
-            orientation: document.getElementById('metaOrientation'),
-            color: document.getElementById('metaColor'),
+            camera: document.getElementById('metaCamera'),
+            capturedAt: document.getElementById('metaCapturedAt'),
+            photoLocation: document.getElementById('metaPhotoLocation'),
+            focalLength: document.getElementById('metaFocalLength'),
             path: document.getElementById('metaPath')
         };
 
@@ -433,14 +457,19 @@
             loadOwnedPhotos();
         });
 
-        photoInput.addEventListener('change', () => {
+        photoInput.addEventListener('change', async () => {
             const file = photoInput.files[0];
-            if (!file) return;
+            if (!file) {
+                resetExtractedMetadata();
+                return;
+            }
 
             document.getElementById('title').value = titleFromFilename(file.name);
             previewImage.src = URL.createObjectURL(file);
             previewImage.style.display = 'block';
             dropCopy.style.display = 'none';
+            resultLink.style.display = 'none';
+            await populateExtractedMetadata(file);
 
         });
 
@@ -464,11 +493,13 @@
                 }
 
                 const media = await response.json();
+                metadataFields.fileName.textContent = media.file_name || photoInput.files[0]?.name || 'Unknown';
                 metadataFields.size.textContent = media.file_size || 'Unknown';
                 metadataFields.dimensions.textContent = media.dimensions || 'Unknown';
-                metadataFields.type.textContent = media.file_type || 'Unknown';
-                metadataFields.orientation.textContent = media.orientation || 'Unknown';
-                metadataFields.color.textContent = media.color_mode || 'Unknown';
+                metadataFields.type.textContent = media.file_type || fileFormat(photoInput.files[0]) || 'Unknown';
+                metadataFields.capturedAt.textContent = media.captured_at || 'Not set';
+                metadataFields.photoLocation.textContent = media.photo_location || 'Not set';
+                metadataFields.focalLength.textContent = media.focal_length || 'Not set';
                 metadataFields.path.textContent = media.image_path || 'Unknown';
 
                 resultLink.href = appPath(`/photo/${media.id}`);
@@ -488,7 +519,7 @@
             try {
                 const response = await fetch(appPath('/api/admin/categories'));
                 if (response.status === 401) {
-                    window.location.href = appPath('/login');
+                    appNavigate('/login');
                     return;
                 }
                 const categories = await response.json();
@@ -522,7 +553,7 @@
             try {
                 const response = await fetch(appPath('/api/me'));
                 if (response.status === 401) {
-                    window.location.href = appPath('/login');
+                    appNavigate('/login');
                     return;
                 }
 
@@ -551,7 +582,7 @@
             try {
                 const response = await fetch(appPath('/api/admin/photos'));
                 if (response.status === 401) {
-                    window.location.href = appPath('/login');
+                    appNavigate('/login');
                     return;
                 }
 
@@ -587,6 +618,278 @@
         function setStatus(message, type) {
             statusMessage.textContent = message;
             statusMessage.className = `status-message ${type}`;
+        }
+
+        async function populateExtractedMetadata(file) {
+            setExtractedMetadata({
+                fileName: file.name,
+                size: humanFileSize(file.size),
+                type: fileFormat(file),
+                dimensions: 'Reading image...',
+                capturedAt: 'Checking metadata...',
+                photoLocation: 'Checking metadata...',
+                camera: 'Checking metadata...',
+                focalLength: 'Checking metadata...',
+                path: 'Available after upload'
+            });
+
+            const [dimensions, exif] = await Promise.all([
+                imageDimensions(file).catch(() => ''),
+                readExifMetadata(file).catch(() => ({}))
+            ]);
+
+            setExtractedMetadata({
+                fileName: file.name,
+                size: humanFileSize(file.size),
+                type: fileFormat(file),
+                dimensions: dimensions || 'Unknown',
+                capturedAt: exif.capturedAt || 'Not embedded',
+                photoLocation: exif.location || 'Not embedded',
+                camera: exif.camera || 'Not embedded',
+                focalLength: exif.focalLength || 'Not embedded',
+                path: 'Available after upload'
+            });
+
+            document.getElementById('capturedAt').value = exif.capturedAt || '';
+            document.getElementById('photoLocation').value = exif.location || '';
+            document.getElementById('camera').value = exif.camera || '';
+            document.getElementById('focalLength').value = exif.focalLength || '';
+        }
+
+        function resetExtractedMetadata() {
+            setExtractedMetadata({
+                fileName: 'Waiting for upload',
+                size: 'Waiting for upload',
+                dimensions: 'Waiting for upload',
+                type: 'Waiting for upload',
+                camera: 'Waiting for upload',
+                capturedAt: 'Waiting for upload',
+                photoLocation: 'Waiting for upload',
+                focalLength: 'Waiting for upload',
+                path: 'Waiting for upload'
+            });
+        }
+
+        function setExtractedMetadata(metadata) {
+            metadataFields.fileName.textContent = metadata.fileName || 'Unknown';
+            metadataFields.size.textContent = metadata.size || 'Unknown';
+            metadataFields.dimensions.textContent = metadata.dimensions || 'Unknown';
+            metadataFields.type.textContent = metadata.type || 'Unknown';
+            metadataFields.camera.textContent = metadata.camera || 'Unknown';
+            metadataFields.capturedAt.textContent = metadata.capturedAt || 'Unknown';
+            metadataFields.photoLocation.textContent = metadata.photoLocation || 'Unknown';
+            metadataFields.focalLength.textContent = metadata.focalLength || 'Unknown';
+            metadataFields.path.textContent = metadata.path || 'Unknown';
+        }
+
+        function imageDimensions(file) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const image = new Image();
+                image.onload = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(`${image.naturalWidth} x ${image.naturalHeight} px`);
+                };
+                image.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('Unable to read image dimensions'));
+                };
+                image.src = url;
+            });
+        }
+
+        function humanFileSize(size) {
+            const units = ['B', 'KB', 'MB', 'GB'];
+            let value = Number(size) || 0;
+            let unitIndex = 0;
+            while (value >= 1024 && unitIndex < units.length - 1) {
+                value /= 1024;
+                unitIndex += 1;
+            }
+            return unitIndex === 0 ? `${value} ${units[unitIndex]}` : `${value.toFixed(1)} ${units[unitIndex]}`;
+        }
+
+        function fileFormat(file) {
+            const extension = String(file?.name || '').split('.').pop();
+            if (file?.type) {
+                return file.type.replace('image/', '').toUpperCase();
+            }
+            return extension ? extension.toUpperCase() : '';
+        }
+
+        async function readExifMetadata(file) {
+            if (!/jpe?g$/i.test(file.name) && !/jpe?g/i.test(file.type)) {
+                return {};
+            }
+
+            const buffer = await file.arrayBuffer();
+            const view = new DataView(buffer);
+            const tiffOffset = findExifTiffOffset(view);
+            if (tiffOffset < 0) {
+                return {};
+            }
+
+            const littleEndian = view.getUint16(tiffOffset, false) === 0x4949;
+            if (view.getUint16(tiffOffset + 2, littleEndian) !== 0x002a) {
+                return {};
+            }
+
+            const firstIfdOffset = tiffOffset + view.getUint32(tiffOffset + 4, littleEndian);
+            const ifd0 = readExifIfd(view, tiffOffset, firstIfdOffset, littleEndian);
+            const exifIfdOffset = ifd0[0x8769]?.value;
+            const gpsIfdOffset = ifd0[0x8825]?.value;
+            const exif = exifIfdOffset ? readExifIfd(view, tiffOffset, tiffOffset + exifIfdOffset, littleEndian) : {};
+            const gps = gpsIfdOffset ? readExifIfd(view, tiffOffset, tiffOffset + gpsIfdOffset, littleEndian) : {};
+
+            const make = cleanExifString(ifd0[0x010f]?.value);
+            const model = cleanExifString(ifd0[0x0110]?.value);
+            return {
+                capturedAt: normalizeExifDate(exif[0x9003]?.value || exif[0x9004]?.value || ifd0[0x0132]?.value),
+                camera: [make, model].filter(Boolean).join(' ').trim(),
+                focalLength: formatFocalLength(exif[0x920a]?.value),
+                location: formatGpsLocation(gps)
+            };
+        }
+
+        function findExifTiffOffset(view) {
+            if (view.byteLength < 4 || view.getUint16(0, false) !== 0xffd8) {
+                return -1;
+            }
+
+            let offset = 2;
+            while (offset + 4 < view.byteLength) {
+                if (view.getUint8(offset) !== 0xff) {
+                    return -1;
+                }
+                const marker = view.getUint8(offset + 1);
+                const size = view.getUint16(offset + 2, false);
+                if (marker === 0xe1 && asciiAt(view, offset + 4, 6) === 'Exif\u0000\u0000') {
+                    return offset + 10;
+                }
+                offset += 2 + size;
+            }
+            return -1;
+        }
+
+        function readExifIfd(view, tiffOffset, ifdOffset, littleEndian) {
+            if (ifdOffset <= 0 || ifdOffset + 2 > view.byteLength) {
+                return {};
+            }
+
+            const entries = {};
+            const entryCount = view.getUint16(ifdOffset, littleEndian);
+            for (let index = 0; index < entryCount; index += 1) {
+                const entryOffset = ifdOffset + 2 + index * 12;
+                if (entryOffset + 12 > view.byteLength) break;
+
+                const tag = view.getUint16(entryOffset, littleEndian);
+                const type = view.getUint16(entryOffset + 2, littleEndian);
+                const count = view.getUint32(entryOffset + 4, littleEndian);
+                const byteLength = exifTypeSize(type) * count;
+                const valueOffset = byteLength <= 4 ? entryOffset + 8 : tiffOffset + view.getUint32(entryOffset + 8, littleEndian);
+                entries[tag] = {
+                    type,
+                    count,
+                    value: readExifValue(view, valueOffset, type, count, littleEndian)
+                };
+            }
+            return entries;
+        }
+
+        function readExifValue(view, offset, type, count, littleEndian) {
+            if (offset < 0 || offset >= view.byteLength) {
+                return '';
+            }
+
+            if (type === 2) {
+                return asciiAt(view, offset, Math.min(count, view.byteLength - offset)).replace(/\0+$/, '');
+            }
+            if (type === 3) {
+                return readExifNumbers(view, offset, count, 2, littleEndian, 'getUint16');
+            }
+            if (type === 4) {
+                return readExifNumbers(view, offset, count, 4, littleEndian, 'getUint32');
+            }
+            if (type === 5) {
+                return readExifRationals(view, offset, count, littleEndian, false);
+            }
+            if (type === 10) {
+                return readExifRationals(view, offset, count, littleEndian, true);
+            }
+            return '';
+        }
+
+        function readExifNumbers(view, offset, count, size, littleEndian, method) {
+            const values = [];
+            for (let index = 0; index < count; index += 1) {
+                const valueOffset = offset + index * size;
+                if (valueOffset + size > view.byteLength) break;
+                values.push(view[method](valueOffset, littleEndian));
+            }
+            return count === 1 ? values[0] : values;
+        }
+
+        function readExifRationals(view, offset, count, littleEndian, signed) {
+            const values = [];
+            for (let index = 0; index < count; index += 1) {
+                const valueOffset = offset + index * 8;
+                if (valueOffset + 8 > view.byteLength) break;
+                const numerator = signed ? view.getInt32(valueOffset, littleEndian) : view.getUint32(valueOffset, littleEndian);
+                const denominator = signed ? view.getInt32(valueOffset + 4, littleEndian) : view.getUint32(valueOffset + 4, littleEndian);
+                values.push(denominator ? numerator / denominator : 0);
+            }
+            return count === 1 ? values[0] : values;
+        }
+
+        function exifTypeSize(type) {
+            return { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 }[type] || 0;
+        }
+
+        function asciiAt(view, offset, length) {
+            let text = '';
+            for (let index = 0; index < length && offset + index < view.byteLength; index += 1) {
+                text += String.fromCharCode(view.getUint8(offset + index));
+            }
+            return text;
+        }
+
+        function cleanExifString(value) {
+            return String(value || '').replace(/\0/g, '').trim();
+        }
+
+        function normalizeExifDate(value) {
+            const text = cleanExifString(value);
+            const match = text.match(/^(\d{4}):(\d{2}):(\d{2})\s+(.+)$/);
+            if (!match) {
+                return text;
+            }
+            return `${match[1]}-${match[2]}-${match[3]} ${match[4]}`;
+        }
+
+        function formatFocalLength(value) {
+            const focal = Array.isArray(value) ? value[0] : value;
+            if (!focal) {
+                return '';
+            }
+            return `${Number(focal).toFixed(1).replace(/\.0$/, '')}mm`;
+        }
+
+        function formatGpsLocation(gps) {
+            const lat = gpsCoordinate(gps[0x0002]?.value, gps[0x0001]?.value);
+            const lon = gpsCoordinate(gps[0x0004]?.value, gps[0x0003]?.value);
+            if (lat === null || lon === null) {
+                return '';
+            }
+            return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+        }
+
+        function gpsCoordinate(parts, ref) {
+            if (!Array.isArray(parts) || parts.length < 3) {
+                return null;
+            }
+            const direction = cleanExifString(ref);
+            const decimal = parts[0] + parts[1] / 60 + parts[2] / 3600;
+            return direction === 'S' || direction === 'W' ? -decimal : decimal;
         }
 
         function titleFromFilename(filename) {

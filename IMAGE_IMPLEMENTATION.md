@@ -77,7 +77,7 @@ The application is **fully functional** with:
 - ✅ Working photo gallery
 - ✅ Search & filtering
 - ✅ Collections management
-- ✅ Shopping cart
+- ✅ Media likes
 - ✅ Responsive layout
 - ✅ All images loading
 
@@ -86,7 +86,7 @@ The application is **fully functional** with:
 ### Quick Start (5 minutes)
 1. Add your images to `/home/sont/Store/dress/static/images/`
 2. Edit `database/seed.go` - replace placeholder URLs with local paths
-3. Delete database: `rm photo_library.db`
+3. Delete database: `rm media_hub.db`
 4. Rebuild: `go build -o photo-library`
 5. Run: `./photo-library`
 
@@ -108,8 +108,7 @@ The application is **fully functional** with:
 - Total Photos: 11
 - Categories: 5 (dress, evening dress, fashion, portraits)
 - Categories with images: 11
-- Average Price: $26.49
-- Price Range: $16.99 - $44.99
+- Likes table: one like per user/media item
 
 **Sample Data:**
 ```
@@ -143,7 +142,7 @@ Tags Applied:
 - ✅ Search by title/description
 - ✅ Filter by category
 - ✅ Filter by tags
-- ✅ Price range slider
+- ✅ Like counts
 - ✅ Pagination (12 per page)
 
 ### Collections
@@ -152,11 +151,10 @@ Tags Applied:
 - ✅ View collection contents
 - ✅ Display photo count
 
-### Cart
-- ✅ Add to cart functionality
-- ✅ View cart items
-- ✅ Remove items
-- ✅ Calculate total
+### Likes
+- ✅ Like media functionality
+- ✅ Unlike media functionality
+- ✅ Display like counts
 
 ---
 
@@ -245,7 +243,7 @@ The application is running and ready to use!
 3. Search: Try searching for "elegant" or "satin"
 4. Filter: Select tags like "luxury" or "formal"
 5. Collections: Create a new collection
-6. Cart: Add some photos to cart
+6. Likes: Like and unlike media
 
 ---
 

@@ -56,7 +56,7 @@ sudo apt-get install imagemagick
 
 ```bash
 cd /home/sont/Store/dress
-rm -f photo_library.db
+rm -f media_hub.db
 go build -o photo-library
 ./photo-library
 ```
@@ -84,7 +84,7 @@ thumbnail:    "https://your-cdn.com/images/photo1-thumb.jpg",
 
 ```bash
 cd /home/sont/Store/dress
-rm -f photo_library.db
+rm -f media_hub.db
 go build -o photo-library
 ./photo-library
 ```
@@ -228,9 +228,7 @@ curl -X POST http://localhost:8082/api/photos \
     "orientation": "Portrait",
     "resolution": "300 DPI",
     "color_mode": "RGB",
-    "photographer": "Your Name",
-    "member_since": "January 2024",
-    "price": 29.99
+    "photographer": "Your Name"
   }'
 ```
 
@@ -238,16 +236,16 @@ curl -X POST http://localhost:8082/api/photos \
 
 ```bash
 # Open SQLite
-sqlite3 /home/sont/Store/dress/photo_library.db
+sqlite3 /home/sont/Store/dress/media_hub.db
 
 # View all photos
-SELECT id, title, image_path, price FROM photos;
+SELECT id, title, image_path FROM images;
 
 # Update image path
-UPDATE photos SET image_path = '/static/images/newphoto.jpg' WHERE id = 1;
+UPDATE images SET image_path = '/static/images/newphoto.jpg' WHERE id = 1;
 
 # Delete photo
-DELETE FROM photos WHERE id = 1;
+DELETE FROM images WHERE id = 1;
 ```
 
 ---
@@ -330,7 +328,7 @@ ls -la /home/sont/Store/dress/static/images/
 chmod 644 /home/sont/Store/dress/static/images/*.jpg
 
 # Check database paths
-sqlite3 /home/sont/Store/dress/photo_library.db "SELECT image_path FROM photos LIMIT 1;"
+sqlite3 /home/sont/Store/dress/media_hub.db "SELECT image_path FROM photos LIMIT 1;"
 ```
 
 ### Slow Image Loading
@@ -368,7 +366,7 @@ convert your-photos.jpg -resize 300x400 your-photos-thumb.jpg
 
 # Reset database and rebuild
 cd /home/sont/Store/dress
-rm -f photo_library.db
+rm -f media_hub.db
 go build -o photo-library
 
 # Run application

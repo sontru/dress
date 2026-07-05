@@ -61,7 +61,8 @@ GET /api/photos?page=1&pageSize=12
       "color_mode": "RGB",
       "photographer": "Alex Morgan",
       "member_since": "May 2016",
-      "price": 29.99,
+      "like_count": 0,
+      "liked_by_user": false,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
     }
@@ -92,11 +93,11 @@ Content-Type: application/json
   "orientation": "Portrait",
   "resolution": "300 DPI",
   "color_mode": "RGB",
-  "photographer": "Photographer Name",
-  "member_since": "May 2016",
-  "price": 29.99
+  "photographer": "Photographer Name"
 }
 ```
+
+`member_since` values in photo responses are derived from the owning user's `created_at` timestamp.
 
 **Response:**
 ```json
@@ -116,8 +117,7 @@ Content-Type: application/json
 {
   "title": "Updated Title",
   "description": "Updated description",
-  "category": "dress",
-  "price": 34.99
+  "category": "dress"
 }
 ```
 
@@ -265,7 +265,8 @@ GET /api/collections/{id}
       "title": "Photo Title",
       "image_path": "/static/images/photo.jpg",
       "thumbnail": "/static/images/photo-thumb.jpg",
-      "price": 29.99
+      "like_count": 0,
+      "liked_by_user": false
     }
   ]
 }
@@ -291,64 +292,33 @@ Content-Type: application/json
 }
 ```
 
-### Shopping Cart
+### Likes
 
-#### Get Cart
+#### Like Image
 ```http
-GET /api/cart?user_id=1
-```
-
-**Query Parameters:**
-- `user_id` (integer): User ID
-
-**Response:**
-```json
-{
-  "items": [
-    {
-      "id": 1,
-      "photo_id": 5,
-      "quantity": 2,
-      "price": 29.99,
-      "added_at": "2024-01-01T00:00:00Z"
-    }
-  ],
-  "total": 59.98
-}
-```
-
-#### Add to Cart
-```http
-POST /api/cart/add
-Content-Type: application/json
-```
-
-**Request Body:**
-```json
-{
-  "user_id": 1,
-  "photo_id": 5
-}
+POST /api/images/{id}/like
 ```
 
 **Response:**
 ```json
 {
-  "message": "Photo added to cart"
+  "image_id": 5,
+  "like_count": 12,
+  "liked_by_user": true
 }
 ```
 
-**Status Code:** 201 Created
-
-#### Remove from Cart
+#### Unlike Image
 ```http
-DELETE /api/cart/remove/{id}
+DELETE /api/images/{id}/like
 ```
 
 **Response:**
 ```json
 {
-  "message": "Item removed from cart"
+  "image_id": 5,
+  "like_count": 11,
+  "liked_by_user": false
 }
 ```
 
@@ -395,12 +365,6 @@ GET /api/search?category=dress
 GET /api/search?tags=elegant,satin
 ```
 
-### By Price
-Currently, price filtering is done client-side. Add server-side support:
-```http
-GET /api/search?min_price=10&max_price=100
-```
-
 ### By Search Query
 ```http
 GET /api/search?q=dress
@@ -412,7 +376,7 @@ Currently, results are ordered by creation date (newest first).
 
 To add sorting:
 ```http
-GET /api/photos?sort=price&order=asc
+GET /api/photos?sort=likes&order=desc
 ```
 
 ## Example Requests
@@ -427,11 +391,9 @@ curl "http://localhost:8082/api/search?q=elegant&category=dress"
 curl "http://localhost:8082/api/collections?user_id=1"
 ```
 
-### Add photo to cart
+### Like an image
 ```bash
-curl -X POST "http://localhost:8082/api/cart/add" \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": 1, "photo_id": 5}'
+curl -X POST "http://localhost:8082/api/images/5/like"
 ```
 
 ### Create a collection

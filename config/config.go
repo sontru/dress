@@ -16,7 +16,7 @@ func Load() *Config {
 
 	return &Config{
 		Port:        port,
-		DatabaseURL: getEnv("DATABASE_URL", "photo_library.db"),
+		DatabaseURL: getEnv("DATABASE_URL", "media_hub.db"),
 		Environment: getEnv("ENVIRONMENT", "development"),
 	}
 }

@@ -8,10 +8,10 @@ services:
       - "8082:8082"
     environment:
       - PORT=8082
-      - DATABASE_URL=photo_library.db
+      - DATABASE_URL=media_hub.db
       - ENVIRONMENT=production
     volumes:
-      - ./photo_library.db:/app/photo_library.db
+      - ./media_hub.db:/app/media_hub.db
       - ./static/images:/app/static/images
     restart: unless-stopped
     healthcheck:

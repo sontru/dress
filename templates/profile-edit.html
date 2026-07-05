@@ -173,7 +173,7 @@
 
                 <div class="profile-edit-actions">
                     <span id="profileStatus" class="profile-status"></span>
-                    <button class="secondary-button" type="button" onclick="window.location.href='/mmh/my-media'">Cancel</button>
+                    <button class="secondary-button" type="button" onclick="appNavigate('/my-media')">Cancel</button>
                     <button id="saveProfile" class="primary-button" type="submit">Save profile</button>
                 </div>
             </section>
@@ -235,7 +235,7 @@
             try {
                 const response = await fetch(appPath('/api/me'));
                 if (response.status === 401) {
-                    window.location.href = appPath('/login');
+                    appNavigate('/login');
                     return;
                 }
                 if (!response.ok) throw new Error(await response.text());

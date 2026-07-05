@@ -168,6 +168,7 @@
 
         .detail-actions {
             display: flex;
+            flex-wrap: wrap;
             gap: 16px;
             margin-top: 32px;
             padding-top: 24px;
@@ -176,7 +177,7 @@
             justify-content: space-between;
         }
 
-        .price-display {
+        .like-display {
             font-size: 24px;
             font-weight: 700;
             color: #222;
@@ -311,12 +312,15 @@
             background: #e8eaed;
         }
 
-        .btn-cart {
+        .btn-like,
+        .btn-save {
             background: #007bff;
             color: white;
         }
 
-        .btn-cart:hover {
+        .btn-like:hover,
+        .btn-like.liked,
+        .btn-save:hover {
             background: #0056b3;
         }
 
@@ -513,25 +517,19 @@
             </a>
             <nav class="nav-menu">
                 <a href="/mmh/photos" class="nav-link">Photos</a>
-                <a href="#" class="nav-link">Illustrations</a>
-                <a href="#" class="nav-link">Vectors</a>
+                <a href="/mmh/images" class="nav-link">Images</a>
                 <a href="#" class="nav-link">Videos</a>
+                <a href="/mmh/#audio" class="nav-link">Audio</a>
                 <a href="#" class="nav-link">Collections</a>
             </nav>
             <div class="header-actions">
                 <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="Search for photos, vectors, videos and more" />
+                    <input type="text" id="searchInput" placeholder="Search for images, videos, audio and more" />
                     <svg class="search-icon" viewBox="0 0 24 24">
                         <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                 </div>
                 <a href="/mmh/register" id="registerButton" class="explore-link" data-auth-register>Register</a>
-                <a href="#" class="cart-link">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m10 0h2m-11 0a2 2 0 11-4 0 2 2 0 014 0m12 0a2 2 0 11-4 0 2 2 0 014 0"/>
-                    </svg>
-                    <span class="cart-count">0</span>
-                </a>
                 <a href="/mmh/my-media" id="myMediaButton" class="sign-in" style="display: none; text-decoration: none;">My Media</a>
                 <a href="/mmh/login" id="authButton" class="sign-in" style="text-decoration: none;">Sign in</a>
             </div>
@@ -575,10 +573,10 @@
 
                 <!-- Actions -->
                 <div class="detail-actions" id="detailActions">
-                    <div class="price-display" id="detailPrice">$29.99</div>
+                    <div class="like-display" id="detailLikes">0 likes</div>
                     <div class="action-buttons" id="publicPhotoActions">
                         <button class="action-button btn-collection" onclick="addToCollection()">♡ Add to collection</button>
-                        <button class="action-button btn-cart" onclick="addToCart()"><span>🛒</span> Add to cart</button>
+                        <button class="action-button btn-like" id="detailLikeButton" onclick="toggleLike()"><span id="detailLikeIcon">♡</span> <span id="detailLikeText">Like</span></button>
                     </div>
                     <div class="owner-panel hidden" id="ownerPhotoActions"></div>
                 </div>
@@ -653,7 +651,7 @@
                 resetPhotoZoom(false);
                 document.getElementById('detailTitle').textContent = capitalizeFirstWord(photo.title);
                 document.getElementById('detailPhotographer').textContent = formatPhotographer(photo);
-                document.getElementById('detailPrice').textContent = `$${photo.price || '29.99'}`;
+                updateLikeDisplay(photo);
                 document.getElementById('detailDescription').textContent = photo.description;
                 await renderDetailActions(photo);
 
@@ -708,6 +706,29 @@
                             <div class="meta-value">${photo.color_mode}</div>
                         </div>
                     </div>
+                    ${photo.category === 'Photos' ? `
+                    <div class="meta-item">
+                        <div class="meta-icon">◷</div>
+                        <div class="meta-content">
+                            <div class="meta-label">Time</div>
+                            <div class="meta-value">${escapeHtml(photo.captured_at || 'Not set')}</div>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-icon">⌖</div>
+                        <div class="meta-content">
+                            <div class="meta-label">Location</div>
+                            <div class="meta-value">${escapeHtml(photo.photo_location || 'Not set')}</div>
+                        </div>
+                    </div>
+                    <div class="meta-item">
+                        <div class="meta-icon">ƒ</div>
+                        <div class="meta-content">
+                            <div class="meta-label">Focal length</div>
+                            <div class="meta-value">${escapeHtml(photo.focal_length || 'Not set')}</div>
+                        </div>
+                    </div>
+                    ` : ''}
                 `;
                 document.getElementById('detailMeta').innerHTML = metaHTML;
 
@@ -783,21 +804,23 @@
         }
 
         async function renderDetailActions(photo) {
-            const price = document.getElementById('detailPrice');
+            const likes = document.getElementById('detailLikes');
             const publicActions = document.getElementById('publicPhotoActions');
             const ownerActions = document.getElementById('ownerPhotoActions');
-            if (!price || !publicActions || !ownerActions) return;
+            if (!likes || !publicActions || !ownerActions) return;
+
+            updateLikeDisplay(photo);
 
             if (!isOwnedPhoto(photo)) {
-                price.style.display = '';
+                likes.style.display = '';
                 publicActions.style.display = '';
                 ownerActions.classList.add('hidden');
                 ownerActions.innerHTML = '';
                 return;
             }
 
-            price.style.display = 'none';
-            publicActions.style.display = 'none';
+            likes.style.display = '';
+            publicActions.style.display = '';
             ownerActions.classList.remove('hidden');
 
             await Promise.all([loadOwnedCollections(), loadPhotoCollections()]);
@@ -880,19 +903,27 @@
                     </div>
                     <div class="owner-edit-grid">
                         <label>
-                            Cost
-                            <input id="ownerEditPrice" name="price" type="number" min="0" step="0.01">
+                            Time
+                            <input id="ownerEditCapturedAt" name="captured_at" type="text">
                         </label>
                         <label>
-                            Visibility
-                            <select id="ownerEditVisibility" name="is_public">
-                                <option value="true">Public</option>
-                                <option value="false">Private</option>
-                            </select>
+                            Location
+                            <input id="ownerEditPhotoLocation" name="photo_location" type="text">
                         </label>
                     </div>
+                    <label>
+                        Focal length
+                        <input id="ownerEditFocalLength" name="focal_length" type="text">
+                    </label>
+                    <label>
+                        Visibility
+                        <select id="ownerEditVisibility" name="is_public">
+                            <option value="true">Public</option>
+                            <option value="false">Private</option>
+                        </select>
+                    </label>
                     <div class="owner-action-buttons">
-                        <button type="submit" class="action-button btn-cart">Save changes</button>
+                        <button type="submit" class="action-button btn-save">Save changes</button>
                         <button type="button" class="action-button btn-owner" onclick="toggleOwnerEdit(false)">Cancel</button>
                     </div>
                 </form>
@@ -904,7 +935,9 @@
             document.getElementById('ownerEditDescription').value = photo.description || '';
             document.getElementById('ownerEditCategory').value = photo.category || '';
             document.getElementById('ownerEditUserCategory').value = photo.user_category || '';
-            document.getElementById('ownerEditPrice').value = photo.price || 0;
+            document.getElementById('ownerEditCapturedAt').value = photo.captured_at || '';
+            document.getElementById('ownerEditPhotoLocation').value = photo.photo_location || '';
+            document.getElementById('ownerEditFocalLength').value = photo.focal_length || '';
             document.getElementById('ownerEditVisibility').value = String(Boolean(photo.is_public));
         }
 
@@ -1038,18 +1071,44 @@
             }
         }
 
-        function addToCart() {
-            fetch(appPath(`/api/cart/add`), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: 1, photo_id: parseInt(currentPhotoId) })
-            }).then(r => r.json()).then(data => {
-                showAlert('Photo added to cart', 'success');
-                updateCartCount();
-            }).catch(error => {
-                console.error('Error adding to cart:', error);
-                showAlert('Error adding to cart', 'error');
-            });
+        async function toggleLike() {
+            if (!currentPhoto) return;
+            const liked = Boolean(currentPhoto.liked_by_user);
+
+            try {
+                const response = await fetch(appPath(`/api/images/${currentPhotoId}/like`), {
+                    method: liked ? 'DELETE' : 'POST'
+                });
+
+                if (response.status === 401) {
+                    showAlert('Sign in to like media', 'info');
+                    return;
+                }
+                if (!response.ok) throw new Error(await response.text());
+
+                const state = await response.json();
+                currentPhoto.like_count = state.like_count;
+                currentPhoto.liked_by_user = state.liked_by_user;
+                updateLikeDisplay(currentPhoto);
+                showAlert(state.liked_by_user ? 'Liked' : 'Like removed', 'success');
+            } catch (error) {
+                console.error('Error updating like:', error);
+                showAlert('Error updating like', 'error');
+            }
+        }
+
+        function updateLikeDisplay(photo) {
+            const likeCount = Number(photo?.like_count || 0);
+            const liked = Boolean(photo?.liked_by_user);
+            const likes = document.getElementById('detailLikes');
+            const button = document.getElementById('detailLikeButton');
+            const icon = document.getElementById('detailLikeIcon');
+            const text = document.getElementById('detailLikeText');
+
+            if (likes) likes.textContent = `${likeCount} ${likeCount === 1 ? 'like' : 'likes'}`;
+            if (button) button.classList.toggle('liked', liked);
+            if (icon) icon.textContent = liked ? '♥' : '♡';
+            if (text) text.textContent = liked ? 'Unlike' : 'Like';
         }
 
         function addToCollection() {
@@ -1109,7 +1168,9 @@
                 description: document.getElementById('ownerEditDescription').value.trim(),
                 category: document.getElementById('ownerEditCategory').value.trim(),
                 user_category: document.getElementById('ownerEditUserCategory').value.trim(),
-                price: Number(document.getElementById('ownerEditPrice').value || 0),
+                captured_at: document.getElementById('ownerEditCapturedAt').value.trim(),
+                photo_location: document.getElementById('ownerEditPhotoLocation').value.trim(),
+                focal_length: document.getElementById('ownerEditFocalLength').value.trim(),
                 is_public: document.getElementById('ownerEditVisibility').value === 'true'
             };
 
@@ -1124,7 +1185,7 @@
                 currentPhoto = updatedPhoto;
                 document.getElementById('detailTitle').textContent = capitalizeFirstWord(currentPhoto.title);
                 document.getElementById('detailDescription').textContent = currentPhoto.description;
-                document.getElementById('detailPrice').textContent = `$${currentPhoto.price || '29.99'}`;
+                updateLikeDisplay(currentPhoto);
                 await renderDetailActions(currentPhoto);
                 showAlert('Photo updated', 'success');
             } catch (error) {
@@ -1140,7 +1201,7 @@
                 const response = await fetch(appPath(`/api/photos/${currentPhotoId}`), { method: 'DELETE' });
                 if (!response.ok) throw new Error(await response.text());
                 showAlert('Photo removed', 'success');
-                window.location.href = appPath('/upload');
+                appNavigate('/my-media');
             } catch (error) {
                 console.error('Error removing photo:', error);
                 showAlert('Error removing photo', 'error');
@@ -1229,18 +1290,6 @@
             return `rgb(${r}, ${g}, ${b})`;
         }
 
-        function updateCartCount() {
-            fetch(appPath('/api/cart?user_id=1'))
-                .then(r => r.json())
-                .then(data => {
-                    const items = Array.isArray(data) ? data : data.items || [];
-                    const count = items.length || 0;
-                    document.querySelectorAll('.cart-count').forEach(el => {
-                        el.textContent = count;
-                    });
-                });
-        }
-
         async function setupAuthButton() {
             const authButton = document.getElementById('authButton');
             const myMediaButton = document.getElementById('myMediaButton');
@@ -1268,7 +1317,7 @@
                     try {
                         const logoutResponse = await fetch(appPath('/api/logout'), { method: 'POST' });
                         if (!logoutResponse.ok) throw new Error(await logoutResponse.text());
-                        window.location.href = appPath('/');
+                        appNavigate('/');
                     } catch (error) {
                         console.error('Error signing out:', error);
                         showAlert('Error signing out', 'error');

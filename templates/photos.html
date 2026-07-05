@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photos - Photo Library</title>
+    <title>Photos - My Media Hub</title>
     <link rel="stylesheet" href="/mmh/static/css/style.css">
     <link rel="stylesheet" href="/mmh/static/css/layout.css">
 </head>
-<body>
+<body data-media-category="Photos" data-media-label="photos">
     <!-- Header Navigation -->
     <header class="header">
         <div class="container">
@@ -20,26 +20,20 @@
 
             <nav class="nav-menu">
                 <a href="/mmh/photos" class="nav-link">Photos</a>
-                <a href="#" class="nav-link">Illustrations</a>
-                <a href="#" class="nav-link">Vectors</a>
-                <a href="#" class="nav-link">Videos</a>
+                <a href="/mmh/images" class="nav-link">Images</a>
+                <a href="/mmh/#videos" class="nav-link">Videos</a>
+                <a href="/mmh/#audio" class="nav-link">Audio</a>
                 <a href="#" class="nav-link">Collections</a>
             </nav>
 
             <div class="header-actions">
                 <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="Search for photos, vectors, videos and more" />
+                    <input type="text" id="searchInput" placeholder="Search photos by title, place, tags and details" />
                     <svg class="search-icon" viewBox="0 0 24 24">
                         <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                 </div>
                 <a href="/mmh/register" id="registerButton" class="explore-link" data-auth-register>Register</a>
-                <a href="#" class="cart-link">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m10 0h2m-11 0a2 2 0 11-4 0 2 2 0 014 0m12 0a2 2 0 11-4 0 2 2 0 014 0"/>
-                    </svg>
-                    <span id="cartCount" class="cart-count">0</span>
-                </a>
                 <a href="/mmh/my-media" id="myMediaButton" class="sign-in" style="display: none; text-decoration: none;">My Media</a>
                 <a href="/mmh/login" id="authButton" class="sign-in" style="text-decoration: none;">Sign in</a>
             </div>
@@ -64,16 +58,12 @@
                 </div>
             </div>
 
-            <div class="filter-section">
-                <h3>Price Range</h3>
-                <input type="range" min="0" max="100" id="priceRange" />
-                <span id="priceDisplay">$0 - $100</span>
-            </div>
         </aside>
 
         <!-- Photos Grid -->
         <section class="photos-section">
             <h1 class="photos-page-title">Photos</h1>
+            <p class="photos-page-subtitle">Browse photographs with capture details including time, location and focal length.</p>
             <div class="photos-grid" id="photosGrid">
                 <!-- Photos will be loaded here -->
             </div>
@@ -161,9 +151,9 @@
 
                     <div class="photo-actions">
                         <button id="addToCollectionBtn" class="btn-primary">Add to collection</button>
-                        <button id="addToCartBtn" class="btn-add-cart">
-                            <span class="cart-icon">🛒</span>
-                            Add to cart - <span id="modalPrice">$29.99</span>
+                        <button id="likePhotoBtn" class="btn-like">
+                            <span class="like-icon">♡</span>
+                            <span id="modalLikeText">Like</span>
                         </button>
                     </div>
                 </div>

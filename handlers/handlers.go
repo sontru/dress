@@ -34,6 +34,14 @@ func HomeHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+// ImagesPageHandler renders the image browsing page
+func ImagesPageHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		http.ServeFile(w, r, "templates/images.html")
+	}
+}
+
 // PhotosPageHandler renders the photo browsing page
 func PhotosPageHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -110,11 +118,13 @@ func GetPhotosHandler(db *sql.DB) http.HandlerFunc {
 		if photoID != "" {
 			// Get single photo with tags
 			var photo models.Photo
+			var userCreatedAt string
 			err := db.QueryRow(`
 				SELECT p.id, COALESCE(p.user_id, 0), p.title, p.description, p.image_path, p.thumbnail, p.category,
 					   COALESCE(p.user_category, ''),
 					   p.dimensions, p.file_type, p.file_size, p.orientation, p.resolution, 
-					   p.color_mode, p.photographer, COALESCE(u.username, ''), p.member_since, p.price,
+					   p.color_mode, p.photographer, COALESCE(u.username, ''), COALESCE(u.created_at, ''),
+					   COALESCE(p.captured_at, ''), COALESCE(p.photo_location, ''), COALESCE(p.focal_length, ''),
 					   COALESCE(p.is_public, 1), p.created_at
 				FROM photos p
 				LEFT JOIN users u ON p.user_id = u.id
@@ -122,7 +132,8 @@ func GetPhotosHandler(db *sql.DB) http.HandlerFunc {
 			`, photoID).Scan(&photo.ID, &photo.UserID, &photo.Title, &photo.Description, &photo.ImagePath,
 				&photo.Thumbnail, &photo.Category, &photo.UserCategory, &photo.Dimensions, &photo.FileType,
 				&photo.FileSize, &photo.Orientation, &photo.Resolution, &photo.ColorMode,
-				&photo.Photographer, &photo.PhotographerUsername, &photo.MemberSince, &photo.Price,
+				&photo.Photographer, &photo.PhotographerUsername, &userCreatedAt,
+				&photo.CapturedAt, &photo.PhotoLocation, &photo.FocalLength,
 				&photo.IsPublic, &photo.CreatedAt)
 
 			if err != nil {
@@ -133,6 +144,7 @@ func GetPhotosHandler(db *sql.DB) http.HandlerFunc {
 				http.Error(w, "Photo not found", http.StatusNotFound)
 				return
 			}
+			setPhotoMemberSince(&photo, userCreatedAt)
 
 			// Load tags for this photo
 			tagRows, err := db.Query(`
@@ -152,6 +164,7 @@ func GetPhotosHandler(db *sql.DB) http.HandlerFunc {
 					}
 				}
 			}
+			populateLikeState(db, r, &photo)
 
 			// Return single photo as array
 			w.Header().Set("Content-Type", "application/json")
@@ -167,6 +180,7 @@ func GetPhotosHandler(db *sql.DB) http.HandlerFunc {
 		pageNum, _ := strconv.Atoi(page)
 		pageSize := 12
 		pageSizeParam := r.URL.Query().Get("pageSize")
+		category := strings.TrimSpace(r.URL.Query().Get("category"))
 		if pageSizeParam == "all" {
 			pageSize = 0
 		} else if parsedPageSize, err := strconv.Atoi(pageSizeParam); err == nil && parsedPageSize > 0 {
@@ -175,19 +189,26 @@ func GetPhotosHandler(db *sql.DB) http.HandlerFunc {
 		offset := (pageNum - 1) * pageSize
 
 		query := `
-			SELECT id, title, description, image_path, thumbnail, category,
-				   dimensions, file_type, file_size, orientation, resolution, 
-				   color_mode, photographer, member_since, price, COALESCE(is_public, 1), created_at
-			FROM photos
+			SELECT p.id, p.title, p.description, p.image_path, p.thumbnail, p.category,
+				   p.dimensions, p.file_type, p.file_size, p.orientation, p.resolution,
+				   p.color_mode, p.photographer, COALESCE(u.created_at, ''),
+				   COALESCE(p.captured_at, ''), COALESCE(p.photo_location, ''), COALESCE(p.focal_length, ''),
+				   COALESCE(p.is_public, 1), p.created_at
+			FROM photos p
+			LEFT JOIN users u ON p.user_id = u.id
 		`
 		args := []interface{}{}
 		if user, err := currentUserFromRequest(db, r); err == nil {
-			query += ` WHERE COALESCE(is_public, 1) = 1 OR user_id = ?`
+			query += ` WHERE (COALESCE(p.is_public, 1) = 1 OR p.user_id = ?)`
 			args = append(args, user.ID)
 		} else {
-			query += ` WHERE COALESCE(is_public, 1) = 1`
+			query += ` WHERE COALESCE(p.is_public, 1) = 1`
 		}
-		query += ` ORDER BY created_at DESC, id DESC`
+		if category != "" {
+			query += ` AND p.category = ?`
+			args = append(args, category)
+		}
+		query += ` ORDER BY p.created_at DESC, p.id DESC`
 		if pageSize > 0 {
 			query += ` LIMIT ? OFFSET ?`
 			args = append(args, pageSize, offset)
@@ -203,23 +224,33 @@ func GetPhotosHandler(db *sql.DB) http.HandlerFunc {
 		photos := []models.Photo{}
 		for rows.Next() {
 			var photo models.Photo
+			var userCreatedAt string
 			err := rows.Scan(&photo.ID, &photo.Title, &photo.Description, &photo.ImagePath,
 				&photo.Thumbnail, &photo.Category, &photo.Dimensions, &photo.FileType,
 				&photo.FileSize, &photo.Orientation, &photo.Resolution, &photo.ColorMode,
-				&photo.Photographer, &photo.MemberSince, &photo.Price, &photo.IsPublic, &photo.CreatedAt)
+				&photo.Photographer, &userCreatedAt, &photo.CapturedAt, &photo.PhotoLocation,
+				&photo.FocalLength, &photo.IsPublic, &photo.CreatedAt)
 			if err != nil {
 				continue
 			}
+			setPhotoMemberSince(&photo, userCreatedAt)
+			populateLikeState(db, r, &photo)
 			photos = append(photos, photo)
 		}
 
 		// Get total count
 		var total int
+		countQuery := "SELECT COUNT(*) FROM photos WHERE COALESCE(is_public, 1) = 1"
+		countArgs := []interface{}{}
 		if user, err := currentUserFromRequest(db, r); err == nil {
-			db.QueryRow("SELECT COUNT(*) FROM photos WHERE COALESCE(is_public, 1) = 1 OR user_id = ?", user.ID).Scan(&total)
-		} else {
-			db.QueryRow("SELECT COUNT(*) FROM photos WHERE COALESCE(is_public, 1) = 1").Scan(&total)
+			countQuery = "SELECT COUNT(*) FROM photos WHERE (COALESCE(is_public, 1) = 1 OR user_id = ?)"
+			countArgs = append(countArgs, user.ID)
 		}
+		if category != "" {
+			countQuery += " AND category = ?"
+			countArgs = append(countArgs, category)
+		}
+		db.QueryRow(countQuery, countArgs...).Scan(&total)
 
 		result := models.SearchResult{
 			Photos:   photos,
@@ -244,13 +275,14 @@ func CreatePhotoHandler(db *sql.DB) http.HandlerFunc {
 
 		result, err := db.Exec(`
 			INSERT INTO photos (title, description, image_path, thumbnail, category,
-				dimensions, file_type, file_size, orientation, resolution,
-				color_mode, photographer, member_since, price)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+				file_name, dimensions, file_type, file_size, orientation, resolution,
+				color_mode, photographer, captured_at, photo_location, camera, focal_length)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`, photo.Title, photo.Description, photo.ImagePath, photo.Thumbnail,
-			photo.Category, photo.Dimensions, photo.FileType, photo.FileSize,
+			defaultString(photo.Category, "Photos"), photo.FileName, photo.Dimensions, photo.FileType, photo.FileSize,
 			photo.Orientation, photo.Resolution, photo.ColorMode,
-			photo.Photographer, photo.MemberSince, photo.Price)
+			photo.Photographer, photo.CapturedAt, photo.PhotoLocation, photo.Camera,
+			photo.FocalLength)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -559,12 +591,23 @@ func GetAdminPhotosHandler(db *sql.DB) http.HandlerFunc {
 		rows, err := db.Query(`
 			SELECT id, COALESCE(user_id, 0), title, description, image_path, thumbnail, category,
 				   COALESCE(user_category, ''),
-				   dimensions, file_type, file_size, orientation, resolution,
-				   color_mode, photographer, member_since, price, COALESCE(is_public, 1), created_at
+				   COALESCE(file_name, ''), dimensions, file_type, file_size, orientation, resolution,
+				   color_mode, photographer, ?,
+				   COALESCE(captured_at, ''), COALESCE(photo_location, ''), COALESCE(camera, ''), COALESCE(focal_length, ''),
+				   COALESCE(is_public, 1), created_at
 			FROM photos
 			WHERE user_id = ?
+			UNION ALL
+			SELECT id, COALESCE(user_id, 0), title, description, image_path, thumbnail, category,
+				   COALESCE(user_category, ''),
+				   '', dimensions, file_type, file_size, orientation, resolution,
+				   color_mode, photographer, ?,
+				   COALESCE(captured_at, ''), '', '', '',
+				   COALESCE(is_public, 1), created_at
+			FROM images
+			WHERE user_id = ?
 			ORDER BY created_at DESC, id DESC
-		`, user.ID)
+		`, user.MemberSince, user.ID, user.MemberSince, user.ID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -575,12 +618,14 @@ func GetAdminPhotosHandler(db *sql.DB) http.HandlerFunc {
 		for rows.Next() {
 			var photo models.Photo
 			err := rows.Scan(&photo.ID, &photo.UserID, &photo.Title, &photo.Description, &photo.ImagePath,
-				&photo.Thumbnail, &photo.Category, &photo.UserCategory, &photo.Dimensions, &photo.FileType,
+				&photo.Thumbnail, &photo.Category, &photo.UserCategory, &photo.FileName, &photo.Dimensions, &photo.FileType,
 				&photo.FileSize, &photo.Orientation, &photo.Resolution, &photo.ColorMode,
-				&photo.Photographer, &photo.MemberSince, &photo.Price, &photo.IsPublic, &photo.CreatedAt)
+				&photo.Photographer, &photo.MemberSince, &photo.CapturedAt, &photo.PhotoLocation,
+				&photo.Camera, &photo.FocalLength, &photo.IsPublic, &photo.CreatedAt)
 			if err != nil {
 				continue
 			}
+			populateLikeState(db, r, &photo)
 			photos = append(photos, photo)
 		}
 
@@ -644,6 +689,9 @@ func UploadPhotoHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		photo.UserID = user.ID
+		photo.MemberSince = user.MemberSince
+		photo.FileName = header.Filename
+		photo.IsPublic = true
 		photo.ImagePath = mediaPublicPath(userUploadDir, photo.Category, photo.UserCategory, filename)
 		photo.Thumbnail = photo.ImagePath
 
@@ -654,15 +702,12 @@ func UploadPhotoHandler(db *sql.DB) http.HandlerFunc {
 		}
 		defer tx.Rollback()
 
-		result, err := tx.Exec(`
-			INSERT INTO photos (user_id, title, description, image_path, thumbnail, category, user_category,
-				dimensions, file_type, file_size, orientation, resolution,
-				color_mode, photographer, member_since, price)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, photo.UserID, photo.Title, photo.Description, photo.ImagePath, photo.Thumbnail,
-			photo.Category, photo.UserCategory, photo.Dimensions, photo.FileType, photo.FileSize,
-			photo.Orientation, photo.Resolution, photo.ColorMode,
-			photo.Photographer, photo.MemberSince, photo.Price)
+		var result sql.Result
+		if isPhotoCategory(photo.Category) {
+			result, err = insertUploadedPhoto(tx, photo)
+		} else {
+			result, err = insertUploadedImage(tx, photo)
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -675,7 +720,7 @@ func UploadPhotoHandler(db *sql.DB) http.HandlerFunc {
 		}
 		photo.ID = int(id)
 
-		if err := attachTags(tx, photo.ID, parseCommaList(r.FormValue("tags"))); err != nil {
+		if err := attachMediaTags(tx, photo.ID, parseCommaList(r.FormValue("tags")), isPhotoCategory(photo.Category)); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -717,11 +762,16 @@ func UpdatePhotoHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		var current storedMediaPaths
-		if err := db.QueryRow(`
+		tableName, err := userMediaTable(db, user.ID, id)
+		if err != nil {
+			http.Error(w, "Photo not found for this user", http.StatusNotFound)
+			return
+		}
+		if err := db.QueryRow(fmt.Sprintf(`
 			SELECT image_path, thumbnail, category, COALESCE(user_category, '')
-			FROM photos
+			FROM %s
 			WHERE id = ? AND user_id = ?
-		`, id, user.ID).Scan(&current.ImagePath, &current.Thumbnail, &current.Category, &current.UserCategory); err != nil {
+		`, tableName), id, user.ID).Scan(&current.ImagePath, &current.Thumbnail, &current.Category, &current.UserCategory); err != nil {
 			http.Error(w, "Photo not found for this user", http.StatusNotFound)
 			return
 		}
@@ -732,10 +782,20 @@ func UpdatePhotoHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		result, err := db.Exec(`
-			UPDATE photos SET title=?, description=?, image_path=?, thumbnail=?, category=?, user_category=?, price=?, is_public=?, updated_at=CURRENT_TIMESTAMP
-			WHERE id=? AND user_id=?
-		`, photo.Title, photo.Description, moved.ImagePath, moved.Thumbnail, photo.Category, photo.UserCategory, photo.Price, photo.IsPublic, id, user.ID)
+		var result sql.Result
+		if tableName == "photos" {
+			result, err = db.Exec(`
+				UPDATE photos SET title=?, description=?, image_path=?, thumbnail=?, category=?, user_category=?, captured_at=?, photo_location=?, camera=?, focal_length=?, is_public=?, updated_at=CURRENT_TIMESTAMP
+				WHERE id=? AND user_id=?
+			`, photo.Title, photo.Description, moved.ImagePath, moved.Thumbnail, photo.Category, photo.UserCategory,
+				photo.CapturedAt, photo.PhotoLocation, photo.Camera, photo.FocalLength, photo.IsPublic, id, user.ID)
+		} else {
+			result, err = db.Exec(`
+				UPDATE images SET title=?, description=?, image_path=?, thumbnail=?, category=?, user_category=?, captured_at=?, is_public=?, updated_at=CURRENT_TIMESTAMP
+				WHERE id=? AND user_id=?
+			`, photo.Title, photo.Description, moved.ImagePath, moved.Thumbnail, photo.Category, photo.UserCategory,
+				photo.CapturedAt, photo.IsPublic, id, user.ID)
+		}
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -772,20 +832,49 @@ func DeletePhotoHandler(db *sql.DB) http.HandlerFunc {
 		}
 		defer tx.Rollback()
 
-		if _, err := tx.Exec("DELETE FROM collection_photos WHERE photo_id = ?", id); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		tableName, err := userMediaTable(db, user.ID, id)
+		if err != nil {
+			http.Error(w, "Photo not found for this user", http.StatusNotFound)
 			return
 		}
-		if _, err := tx.Exec("DELETE FROM photo_tags WHERE photo_id = ?", id); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		var result sql.Result
+		if tableName == "photos" {
+			if _, err := tx.Exec("DELETE FROM collection_photos WHERE photo_id = ?", id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if _, err := tx.Exec("DELETE FROM photo_tags WHERE photo_id = ?", id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if _, err := tx.Exec("DELETE FROM photo_keywords WHERE photo_id = ?", id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if _, err := tx.Exec("DELETE FROM photo_likes WHERE photo_id = ?", id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			result, err = tx.Exec("DELETE FROM photos WHERE id=? AND user_id=?", id, user.ID)
+		} else {
+			if _, err := tx.Exec("DELETE FROM collection_images WHERE image_id = ?", id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if _, err := tx.Exec("DELETE FROM image_tags WHERE image_id = ?", id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if _, err := tx.Exec("DELETE FROM image_keywords WHERE image_id = ?", id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if _, err := tx.Exec("DELETE FROM image_likes WHERE image_id = ?", id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			result, err = tx.Exec("DELETE FROM images WHERE id=? AND user_id=?", id, user.ID)
 		}
-		if _, err := tx.Exec("DELETE FROM photo_keywords WHERE photo_id = ?", id); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		result, err := tx.Exec("DELETE FROM photos WHERE id=? AND user_id=?", id, user.ID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -822,37 +911,56 @@ func SearchHandler(db *sql.DB) http.HandlerFunc {
 		sqlQuery := `
 			SELECT DISTINCT p.id, p.title, p.description, p.image_path, p.thumbnail,
 				   p.category, p.dimensions, p.file_type, p.file_size, p.orientation,
-				   p.resolution, p.color_mode, p.photographer, p.member_since, p.price,
+				   p.resolution, p.color_mode, p.photographer, COALESCE(u.created_at, ''),
+				   COALESCE(p.captured_at, ''), COALESCE(p.photo_location, ''), COALESCE(p.focal_length, ''),
 				   COALESCE(p.is_public, 1), p.created_at
 			FROM photos p
+			LEFT JOIN users u ON p.user_id = u.id
 			LEFT JOIN photo_tags pt ON p.id = pt.photo_id
 			LEFT JOIN tags t ON pt.tag_id = t.id
 			WHERE 1=1
 		`
 		args := []interface{}{}
+		countQuery := `
+			SELECT COUNT(DISTINCT p.id) FROM photos p
+			LEFT JOIN photo_tags pt ON p.id = pt.photo_id
+			LEFT JOIN tags t ON pt.tag_id = t.id
+			WHERE 1=1
+		`
+		countArgs := []interface{}{}
 		if user, err := currentUserFromRequest(db, r); err == nil {
 			sqlQuery += ` AND (COALESCE(p.is_public, 1) = 1 OR p.user_id = ?)`
+			countQuery += ` AND (COALESCE(p.is_public, 1) = 1 OR p.user_id = ?)`
 			args = append(args, user.ID)
+			countArgs = append(countArgs, user.ID)
 		} else {
 			sqlQuery += ` AND COALESCE(p.is_public, 1) = 1`
+			countQuery += ` AND COALESCE(p.is_public, 1) = 1`
 		}
 
 		if query != "" {
 			sqlQuery += ` AND (p.title LIKE ? OR p.description LIKE ? OR t.name LIKE ?)`
+			countQuery += ` AND (p.title LIKE ? OR p.description LIKE ? OR t.name LIKE ?)`
 			searchTerm := "%" + query + "%"
 			args = append(args, searchTerm, searchTerm, searchTerm)
+			countArgs = append(countArgs, searchTerm, searchTerm, searchTerm)
 		}
 
 		if category != "" {
 			sqlQuery += ` AND p.category = ?`
+			countQuery += ` AND p.category = ?`
 			args = append(args, category)
+			countArgs = append(countArgs, category)
 		}
 
 		if tags != "" {
 			tagList := strings.Split(tags, ",")
 			sqlQuery += ` AND t.name IN (` + strings.Repeat("?,", len(tagList)-1) + `?)`
+			countQuery += ` AND t.name IN (` + strings.Repeat("?,", len(tagList)-1) + `?)`
 			for _, tag := range tagList {
-				args = append(args, strings.TrimSpace(tag))
+				tag = strings.TrimSpace(tag)
+				args = append(args, tag)
+				countArgs = append(countArgs, tag)
 			}
 		}
 
@@ -869,25 +977,26 @@ func SearchHandler(db *sql.DB) http.HandlerFunc {
 		photos := []models.Photo{}
 		for rows.Next() {
 			var photo models.Photo
+			var userCreatedAt string
 			err := rows.Scan(&photo.ID, &photo.Title, &photo.Description, &photo.ImagePath,
 				&photo.Thumbnail, &photo.Category, &photo.Dimensions, &photo.FileType,
 				&photo.FileSize, &photo.Orientation, &photo.Resolution, &photo.ColorMode,
-				&photo.Photographer, &photo.MemberSince, &photo.Price, &photo.IsPublic, &photo.CreatedAt)
+				&photo.Photographer, &userCreatedAt, &photo.CapturedAt, &photo.PhotoLocation,
+				&photo.FocalLength, &photo.IsPublic, &photo.CreatedAt)
 			if err != nil {
 				continue
 			}
+			setPhotoMemberSince(&photo, userCreatedAt)
+			populateLikeState(db, r, &photo)
 			photos = append(photos, photo)
 		}
 
 		// Get total count
 		var total int
-		countQuery := `
-			SELECT COUNT(DISTINCT p.id) FROM photos p
-			LEFT JOIN photo_tags pt ON p.id = pt.photo_id
-			LEFT JOIN tags t ON pt.tag_id = t.id
-			WHERE 1=1
-		`
-		db.QueryRow(countQuery + ` AND (p.title LIKE ? OR p.description LIKE ?)`).Scan(&total)
+		if err := db.QueryRow(countQuery, countArgs...).Scan(&total); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		result := models.SearchResult{
 			Photos:   photos,
@@ -952,7 +1061,7 @@ func GetCollectionsHandler(db *sql.DB) http.HandlerFunc {
 
 		query := `
 			SELECT id, name, description, user_id, 
-				   (SELECT COUNT(*) FROM collection_photos WHERE collection_id = collections.id) as photo_count,
+				   (SELECT COUNT(*) FROM collection_images WHERE collection_id = collections.id) as photo_count,
 				   created_at
 			FROM collections
 		`
@@ -1032,9 +1141,9 @@ func GetCollectionHandler(db *sql.DB) http.HandlerFunc {
 
 		// Get photos in collection
 		rows, err := db.Query(`
-			SELECT p.id, p.title, p.image_path, p.thumbnail, p.price
-			FROM photos p
-			JOIN collection_photos cp ON p.id = cp.photo_id
+			SELECT p.id, p.title, p.image_path, p.thumbnail
+			FROM images p
+			JOIN collection_images cp ON p.id = cp.image_id
 			WHERE cp.collection_id = ?
 		`, id)
 		if err != nil {
@@ -1046,7 +1155,8 @@ func GetCollectionHandler(db *sql.DB) http.HandlerFunc {
 		photos := []models.Photo{}
 		for rows.Next() {
 			var photo models.Photo
-			rows.Scan(&photo.ID, &photo.Title, &photo.ImagePath, &photo.Thumbnail, &photo.Price)
+			rows.Scan(&photo.ID, &photo.Title, &photo.ImagePath, &photo.Thumbnail)
+			populateLikeState(db, r, &photo)
 			photos = append(photos, photo)
 		}
 
@@ -1069,6 +1179,7 @@ func AddPhotoToCollectionHandler(db *sql.DB) http.HandlerFunc {
 		}
 		var req struct {
 			PhotoID int `json:"photo_id"`
+			ImageID int `json:"image_id"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -1076,8 +1187,12 @@ func AddPhotoToCollectionHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		if req.ImageID != 0 {
+			req.PhotoID = req.ImageID
+		}
+
 		_, err := db.Exec(
-			"INSERT OR IGNORE INTO collection_photos (collection_id, photo_id) VALUES (?, ?)",
+			"INSERT OR IGNORE INTO collection_images (collection_id, image_id) VALUES (?, ?)",
 			collectionID, req.PhotoID)
 
 		if err != nil {
@@ -1110,11 +1225,11 @@ func GetPhotoCollectionsHandler(db *sql.DB) http.HandlerFunc {
 
 		rows, err := db.Query(`
 			SELECT c.id, c.name, c.description, c.user_id,
-				   (SELECT COUNT(*) FROM collection_photos WHERE collection_id = c.id) AS photo_count,
+				   (SELECT COUNT(*) FROM collection_images WHERE collection_id = c.id) AS photo_count,
 				   c.created_at
 			FROM collections c
-			JOIN collection_photos cp ON cp.collection_id = c.id
-			WHERE cp.photo_id = ? AND c.user_id = ?
+			JOIN collection_images cp ON cp.collection_id = c.id
+			WHERE cp.image_id = ? AND c.user_id = ?
 			ORDER BY c.name
 		`, photoID, user.ID)
 		if err != nil {
@@ -1166,12 +1281,17 @@ func MovePhotoHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		tableName, err := userMediaTable(db, user.ID, photoID)
+		if err != nil {
+			http.Error(w, "Photo not found for this user", http.StatusNotFound)
+			return
+		}
 		var current storedMediaPaths
-		if err := db.QueryRow(`
+		if err := db.QueryRow(fmt.Sprintf(`
 			SELECT image_path, thumbnail, category, COALESCE(user_category, '')
-			FROM photos
+			FROM %s
 			WHERE id = ? AND user_id = ?
-		`, photoID, user.ID).Scan(&current.ImagePath, &current.Thumbnail, &current.Category, &current.UserCategory); err != nil {
+		`, tableName), photoID, user.ID).Scan(&current.ImagePath, &current.Thumbnail, &current.Category, &current.UserCategory); err != nil {
 			http.Error(w, "Photo not found for this user", http.StatusNotFound)
 			return
 		}
@@ -1194,17 +1314,32 @@ func MovePhotoHandler(db *sql.DB) http.HandlerFunc {
 		}
 		defer tx.Rollback()
 
-		if _, err := tx.Exec("DELETE FROM collection_photos WHERE photo_id = ?", photoID); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if _, err := tx.Exec("INSERT OR IGNORE INTO collection_photos (collection_id, photo_id) VALUES (?, ?)", req.CollectionID, photoID); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if _, err := tx.Exec("UPDATE photos SET image_path = ?, thumbnail = ?, user_category = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?", moved.ImagePath, moved.Thumbnail, collectionName, photoID, user.ID); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		if tableName == "photos" {
+			if _, err := tx.Exec("DELETE FROM collection_photos WHERE photo_id = ?", photoID); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if _, err := tx.Exec("INSERT OR IGNORE INTO collection_photos (collection_id, photo_id) VALUES (?, ?)", req.CollectionID, photoID); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if _, err := tx.Exec("UPDATE photos SET image_path = ?, thumbnail = ?, user_category = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?", moved.ImagePath, moved.Thumbnail, collectionName, photoID, user.ID); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			if _, err := tx.Exec("DELETE FROM collection_images WHERE image_id = ?", photoID); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if _, err := tx.Exec("INSERT OR IGNORE INTO collection_images (collection_id, image_id) VALUES (?, ?)", req.CollectionID, photoID); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if _, err := tx.Exec("UPDATE images SET image_path = ?, thumbnail = ?, user_category = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?", moved.ImagePath, moved.Thumbnail, collectionName, photoID, user.ID); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 		if err := upsertUserCategory(tx, user.ID, collectionName); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1242,7 +1377,12 @@ func UpdatePhotoVisibilityHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		result, err := db.Exec("UPDATE photos SET is_public = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?", req.IsPublic, photoID, user.ID)
+		tableName, err := userMediaTable(db, user.ID, photoID)
+		if err != nil {
+			http.Error(w, "Photo not found for this user", http.StatusNotFound)
+			return
+		}
+		result, err := db.Exec(fmt.Sprintf("UPDATE %s SET is_public = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?", tableName), req.IsPublic, photoID, user.ID)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -1257,96 +1397,51 @@ func UpdatePhotoVisibilityHandler(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GetCartHandler retrieves user's cart
-func GetCartHandler(db *sql.DB) http.HandlerFunc {
+// LikeImageHandler records a single like from the current user for an image.
+func LikeImageHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID := r.URL.Query().Get("user_id")
-
-		rows, err := db.Query(`
-			SELECT id, photo_id, quantity, price, added_at FROM cart_items
-			WHERE user_id = ?
-			ORDER BY added_at DESC
-		`, userID)
+		user, ok := requireCurrentUser(db, w, r)
+		if !ok {
+			return
+		}
+		imageID, err := photoIDFromRequest(r)
 		if err != nil {
+			http.Error(w, "Invalid image ID", http.StatusBadRequest)
+			return
+		}
+		if !imageIsVisibleToUser(db, user.ID, imageID) {
+			http.Error(w, "Image not found", http.StatusNotFound)
+			return
+		}
+		if _, err := db.Exec("INSERT OR IGNORE INTO image_likes (user_id, image_id) VALUES (?, ?)", user.ID, imageID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		defer rows.Close()
-
-		cartItems := []models.CartItem{}
-		total := 0.0
-
-		for rows.Next() {
-			var item models.CartItem
-			rows.Scan(&item.ID, &item.PhotoID, &item.Quantity, &item.Price, &item.AddedAt)
-			cartItems = append(cartItems, item)
-			total += item.Price * float64(item.Quantity)
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"items": cartItems,
-			"total": total,
-		})
+		writeLikeState(w, db, user.ID, imageID)
 	}
 }
 
-// AddToCartHandler adds a photo to cart
-func AddToCartHandler(db *sql.DB) http.HandlerFunc {
+// UnlikeImageHandler removes the current user's like from an image.
+func UnlikeImageHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req struct {
-			UserID  int `json:"user_id"`
-			PhotoID int `json:"photo_id"`
-		}
-
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		user, ok := requireCurrentUser(db, w, r)
+		if !ok {
 			return
 		}
-
-		// Get photo price
-		var price float64
-		err := db.QueryRow("SELECT price FROM photos WHERE id = ?", req.PhotoID).Scan(&price)
+		imageID, err := photoIDFromRequest(r)
 		if err != nil {
-			http.Error(w, "Photo not found", http.StatusNotFound)
+			http.Error(w, "Invalid image ID", http.StatusBadRequest)
 			return
 		}
-
-		_, err = db.Exec(
-			`INSERT INTO cart_items (user_id, photo_id, quantity, price) 
-			 VALUES (?, ?, 1, ?)
-			 ON CONFLICT DO UPDATE SET quantity = quantity + 1`,
-			req.UserID, req.PhotoID, price)
-
-		if err != nil {
+		if !imageIsVisibleToUser(db, user.ID, imageID) {
+			http.Error(w, "Image not found", http.StatusNotFound)
+			return
+		}
+		if _, err := db.Exec("DELETE FROM image_likes WHERE user_id = ? AND image_id = ?", user.ID, imageID); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Photo added to cart"})
-	}
-}
-
-// RemoveFromCartHandler removes a photo from cart
-func RemoveFromCartHandler(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		idStr := r.URL.Query().Get("id")
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			http.Error(w, "Invalid cart item ID", http.StatusBadRequest)
-			return
-		}
-
-		_, err = db.Exec("DELETE FROM cart_items WHERE id = ?", id)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"message": "Item removed from cart"})
+		writeLikeState(w, db, user.ID, imageID)
 	}
 }
 
@@ -1377,26 +1472,23 @@ func buildUploadedPhoto(r *http.Request, file multipart.File, header *multipart.
 		return models.Photo{}, nil, fmt.Errorf("title is required")
 	}
 
-	price, _ := strconv.ParseFloat(strings.TrimSpace(r.FormValue("price")), 64)
-	if price <= 0 {
-		price = 29.99
-	}
-
 	photo := models.Photo{
-		Title:        title,
-		Description:  strings.TrimSpace(r.FormValue("description")),
-		Category:     defaultString(strings.TrimSpace(r.FormValue("category")), "Default"),
-		UserCategory: defaultString(strings.TrimSpace(r.FormValue("user_category")), "Default"),
-		Dimensions:   fmt.Sprintf("%d x %d px", cfg.Width, cfg.Height),
-		FileType:     strings.ToUpper(format),
-		FileSize:     humanFileSize(int64(len(imageBytes))),
-		Orientation:  imageOrientation(cfg.Width, cfg.Height),
-		Resolution:   fmt.Sprintf("%d x %d", cfg.Width, cfg.Height),
-		ColorMode:    colorMode(decoded),
-		Photographer: strings.TrimSpace(r.FormValue("photographer")),
-		MemberSince:  strings.TrimSpace(r.FormValue("member_since")),
-		Price:        price,
-		Tags:         parseCommaList(r.FormValue("tags")),
+		Title:         title,
+		Description:   strings.TrimSpace(r.FormValue("description")),
+		Category:      defaultString(strings.TrimSpace(r.FormValue("category")), "Default"),
+		UserCategory:  defaultString(strings.TrimSpace(r.FormValue("user_category")), "Default"),
+		Dimensions:    fmt.Sprintf("%d x %d px", cfg.Width, cfg.Height),
+		FileType:      strings.ToUpper(format),
+		FileSize:      humanFileSize(int64(len(imageBytes))),
+		Orientation:   imageOrientation(cfg.Width, cfg.Height),
+		Resolution:    fmt.Sprintf("%d x %d", cfg.Width, cfg.Height),
+		ColorMode:     colorMode(decoded),
+		Photographer:  strings.TrimSpace(r.FormValue("photographer")),
+		CapturedAt:    strings.TrimSpace(r.FormValue("captured_at")),
+		PhotoLocation: strings.TrimSpace(r.FormValue("photo_location")),
+		Camera:        strings.TrimSpace(r.FormValue("camera")),
+		FocalLength:   strings.TrimSpace(r.FormValue("focal_length")),
+		Tags:          parseCommaList(r.FormValue("tags")),
 	}
 
 	return photo, imageBytes, nil
@@ -1591,12 +1683,12 @@ func userStorageFolder(user models.User) string {
 
 func mediaStorageFolder(mediaCategory string) string {
 	switch strings.ToLower(strings.TrimSpace(mediaCategory)) {
-	case "illustration", "illustrations":
-		return "illustrations"
-	case "vector", "vectors":
-		return "vectors"
+	case "image", "images":
+		return "images"
 	case "video", "videos":
 		return "videos"
+	case "audio":
+		return "audio"
 	default:
 		return "photos"
 	}
@@ -1744,7 +1836,48 @@ func displayDate(value string) string {
 	return value
 }
 
+func setPhotoMemberSince(photo *models.Photo, userCreatedAt string) {
+	if photo == nil {
+		return
+	}
+	photo.MemberSince = displayDate(userCreatedAt)
+}
+
+func insertUploadedPhoto(tx *sql.Tx, photo models.Photo) (sql.Result, error) {
+	return tx.Exec(`
+		INSERT INTO photos (
+			id, user_id, title, description, image_path, thumbnail, category, user_category,
+			file_name, dimensions, file_type, file_size, orientation, resolution, color_mode,
+			photographer, captured_at, photo_location, camera, focal_length,
+			is_public, created_at, updated_at
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	`, nil, photo.UserID, photo.Title, photo.Description, photo.ImagePath, photo.Thumbnail,
+		photo.Category, photo.UserCategory, photo.FileName, photo.Dimensions, photo.FileType,
+		photo.FileSize, photo.Orientation, photo.Resolution, photo.ColorMode, photo.Photographer,
+		photo.CapturedAt, photo.PhotoLocation, photo.Camera, photo.FocalLength, photo.IsPublic)
+}
+
+func insertUploadedImage(tx *sql.Tx, photo models.Photo) (sql.Result, error) {
+	return tx.Exec(`
+		INSERT INTO images (user_id, title, description, image_path, thumbnail, category, user_category,
+			dimensions, file_type, file_size, orientation, resolution,
+			color_mode, photographer, captured_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, photo.UserID, photo.Title, photo.Description, photo.ImagePath, photo.Thumbnail,
+		photo.Category, photo.UserCategory, photo.Dimensions, photo.FileType, photo.FileSize,
+		photo.Orientation, photo.Resolution, photo.ColorMode, photo.Photographer, photo.CapturedAt)
+}
+
+func isPhotoCategory(category string) bool {
+	return strings.EqualFold(strings.TrimSpace(category), "Photos")
+}
+
 func attachTags(tx *sql.Tx, photoID int, tags []string) error {
+	return attachMediaTags(tx, photoID, tags, false)
+}
+
+func attachMediaTags(tx *sql.Tx, photoID int, tags []string, photoTable bool) error {
 	for _, tag := range tags {
 		if _, err := tx.Exec("INSERT OR IGNORE INTO tags (name) VALUES (?)", tag); err != nil {
 			return err
@@ -1755,8 +1888,14 @@ func attachTags(tx *sql.Tx, photoID int, tags []string) error {
 			return err
 		}
 
-		if _, err := tx.Exec("INSERT OR IGNORE INTO photo_tags (photo_id, tag_id) VALUES (?, ?)", photoID, tagID); err != nil {
-			return err
+		if photoTable {
+			if _, err := tx.Exec("INSERT OR IGNORE INTO photo_tags (photo_id, tag_id) VALUES (?, ?)", photoID, tagID); err != nil {
+				return err
+			}
+		} else {
+			if _, err := tx.Exec("INSERT OR IGNORE INTO image_tags (image_id, tag_id) VALUES (?, ?)", photoID, tagID); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -1858,9 +1997,22 @@ func requestUserOwnsPhoto(db *sql.DB, r *http.Request, photoID int) bool {
 }
 
 func userOwnsPhoto(db *sql.DB, userID int, photoID int) bool {
-	var exists int
-	err := db.QueryRow("SELECT 1 FROM photos WHERE id = ? AND user_id = ?", photoID, userID).Scan(&exists)
+	_, err := userMediaTable(db, userID, photoID)
 	return err == nil
+}
+
+func userMediaTable(db *sql.DB, userID int, mediaID int) (string, error) {
+	for _, tableName := range []string{"photos", "images"} {
+		var exists int
+		err := db.QueryRow(fmt.Sprintf("SELECT 1 FROM %s WHERE id = ? AND user_id = ?", tableName), mediaID, userID).Scan(&exists)
+		if err == nil {
+			return tableName, nil
+		}
+		if err != sql.ErrNoRows {
+			return "", err
+		}
+	}
+	return "", sql.ErrNoRows
 }
 
 func photoIDFromRequest(r *http.Request) (int, error) {
@@ -2011,4 +2163,39 @@ func writeAuthResponse(w http.ResponseWriter, r *http.Request, status int, user 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(user)
+}
+
+func populateLikeState(db *sql.DB, r *http.Request, photo *models.Photo) {
+	if photo == nil || photo.ID == 0 {
+		return
+	}
+	_ = db.QueryRow("SELECT COUNT(*) FROM image_likes WHERE image_id = ?", photo.ID).Scan(&photo.LikeCount)
+	if user, err := currentUserFromRequest(db, r); err == nil {
+		var liked int
+		_ = db.QueryRow("SELECT COUNT(*) FROM image_likes WHERE image_id = ? AND user_id = ?", photo.ID, user.ID).Scan(&liked)
+		photo.LikedByUser = liked > 0
+	}
+}
+
+func writeLikeState(w http.ResponseWriter, db *sql.DB, userID int, imageID int) {
+	var likeCount int
+	var likedCount int
+	_ = db.QueryRow("SELECT COUNT(*) FROM image_likes WHERE image_id = ?", imageID).Scan(&likeCount)
+	_ = db.QueryRow("SELECT COUNT(*) FROM image_likes WHERE image_id = ? AND user_id = ?", imageID, userID).Scan(&likedCount)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"image_id":      imageID,
+		"like_count":    likeCount,
+		"liked_by_user": likedCount > 0,
+	})
+}
+
+func imageIsVisibleToUser(db *sql.DB, userID int, imageID int) bool {
+	var exists int
+	err := db.QueryRow(`
+		SELECT COUNT(*) FROM images
+		WHERE id = ? AND (COALESCE(is_public, 1) = 1 OR user_id = ?)
+	`, imageID, userID).Scan(&exists)
+	return err == nil && exists > 0
 }

@@ -77,7 +77,7 @@ Changes to Go files will automatically rebuild and restart the server.
    - Navigation menu at the top
    - Search bar
    - Photo grid (with sample data)
-   - Filters sidebar (categories, tags, price)
+   - Filters sidebar (categories and tags)
    - Collections sidebar
 
 ## First Steps
@@ -90,7 +90,7 @@ Changes to Go files will automatically rebuild and restart the server.
 - Use the search bar at the top to find photos
 - Filter by category using the left sidebar
 - Select tags to filter results
-- Use the price slider to limit price range
+- Like media items when signed in
 
 ### Create Collections
 - Click "+ New" in the Collections sidebar
@@ -98,10 +98,10 @@ Changes to Go files will automatically rebuild and restart the server.
 - Click "Create" to add the collection
 - Click on a photo and "Add to collection" to add photos
 
-### Add to Cart
+### Like Media
 - Click on a photo to view details
-- Click "Add to cart" button
-- View cart using the cart icon in the header
+- Click the like button
+- Like counts update on the media item
 
 ## Configuration
 
@@ -135,7 +135,7 @@ export PORT=3001
 ### Database errors
 ```bash
 # Reset database (deletes all data!)
-rm photo_library.db
+rm media_hub.db
 ./photo-library
 ```
 

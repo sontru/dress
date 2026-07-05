@@ -17,31 +17,20 @@ const mediaConfig = {
         uploadHint: 'Add single photos or upload in bulk',
         dropTitle: 'Drag and drop photos here',
         dropSubtitle: 'PNG, JPEG or GIF up to 20MB each',
-        accept: 'image/png,image/jpeg,image/gif',
+        accept: 'image/png,image/jpeg,image/gif,.svg,.eps,.ai',
         backed: true,
     },
-    illustrations: {
-        singular: 'illustration',
-        plural: 'illustrations',
-        hubCategory: 'Illustrations',
-        uploadTitle: 'Upload Illustrations',
-        uploadHint: 'Use the same workflow for illustrations',
-        dropTitle: 'Drag and drop illustrations here',
-        dropSubtitle: 'PNG, JPEG or GIF files',
-        accept: 'image/png,image/jpeg,image/gif',
-        backed: false,
-    },
-    vectors: {
-        singular: 'vector',
-        plural: 'vectors',
-        hubCategory: 'Vectors',
-        uploadTitle: 'Upload Vectors',
-        uploadHint: 'Use the same workflow for vector packs',
-        dropTitle: 'Drag and drop vectors here',
-        dropSubtitle: 'SVG, EPS or AI files when vector storage is enabled',
-        accept: '.svg,.eps,.ai',
-        backed: false,
-    },
+	images: {
+		singular: 'image',
+		plural: 'images',
+		hubCategory: 'Images',
+        uploadTitle: 'Upload Images',
+        uploadHint: 'Use the same workflow for image files and designs',
+		dropTitle: 'Drag and drop images here',
+		dropSubtitle: 'PNG, JPEG, GIF, SVG, EPS or AI files',
+		accept: 'image/png,image/jpeg,image/gif',
+		backed: true,
+	},
     videos: {
         singular: 'video',
         plural: 'videos',
@@ -51,6 +40,17 @@ const mediaConfig = {
         dropTitle: 'Drag and drop videos here',
         dropSubtitle: 'MP4, MOV or WEBM files when video storage is enabled',
         accept: 'video/mp4,video/quicktime,video/webm',
+        backed: false,
+    },
+    audio: {
+        singular: 'audio file',
+        plural: 'audio files',
+        hubCategory: 'Audio',
+        uploadTitle: 'Upload Audio',
+        uploadHint: 'Use the same workflow for music and sound files',
+        dropTitle: 'Drag and drop audio files here',
+        dropSubtitle: 'MP3, WAV, AAC or OGG files when audio storage is enabled',
+        accept: 'audio/mpeg,audio/wav,audio/aac,audio/ogg',
         backed: false,
     },
 };
@@ -68,13 +68,17 @@ function bindElements() {
         'headerAvatar', 'headerName', 'profileAvatar', 'profileName', 'profileSince',
         'managerSearch', 'uploadForm', 'mediaInput', 'fileQueue', 'uploadTitle',
         'uploadHint', 'dropTitle', 'dropSubtitle', 'mediaTitle', 'mediaDescription',
-        'mediaCategory', 'hubCategory', 'mediaTags', 'mediaPrice',
+        'mediaCategory', 'hubCategory', 'mediaTags',
+        'mediaCapturedAt', 'mediaLocation', 'mediaCamera', 'mediaFocalLength',
+        'uploadMetaDateTime', 'uploadMetaLocation', 'uploadMetaCamera',
+        'uploadMetaDimensions', 'uploadMetaFileName', 'uploadMetaFileSize',
+        'uploadMetaFileFormat',
         'startUpload', 'uploadStatus', 'manageTitle', 'manageSummary', 'mediaTable',
         'selectedCount', 'selectAllButton', 'bulkEditButton', 'bulkCategorySelect',
         'bulkDeleteButton', 'sortSelect', 'categoryList', 'categorySummary',
         'createCategoryTop', 'uploadMediaTop', 'editDialog', 'editForm', 'editId',
         'editTitle', 'editDescription', 'editCategory', 'editHubCategory',
-        'editPrice', 'editIsPublic', 'editStatus', 'categoryDialog', 'categoryForm',
+        'editIsPublic', 'editStatus', 'categoryDialog', 'categoryForm',
         'newCategoryName', 'categoryStatus', 'storageUsed', 'mediaWatermark',
         'watermarkFileField', 'watermarkFile'
     ].forEach((id) => {
@@ -106,7 +110,7 @@ function bindEvents() {
     els.bulkEditButton.addEventListener('click', editFirstSelected);
     els.createCategoryTop.addEventListener('click', openCategoryDialog);
     els.uploadMediaTop.addEventListener('click', () => {
-        window.location.href = appPath('/upload');
+        appNavigate('/upload');
     });
     els.categoryForm.addEventListener('submit', createCategory);
     els.editForm.addEventListener('submit', saveEdit);
@@ -126,7 +130,7 @@ async function loadCurrentUser() {
     try {
         const response = await fetch(appPath('/api/me'));
         if (response.status === 401) {
-            window.location.href = appPath('/login');
+            appNavigate('/login');
             return;
         }
         if (!response.ok) throw new Error(await response.text());
@@ -154,7 +158,7 @@ async function loadCategories() {
     try {
         const response = await fetch(appPath('/api/admin/categories'));
         if (response.status === 401) {
-            window.location.href = appPath('/login');
+            appNavigate('/login');
             return;
         }
         if (!response.ok) throw new Error(await response.text());
@@ -169,7 +173,7 @@ async function loadPhotos() {
     try {
         const response = await fetch(appPath('/api/admin/photos'));
         if (response.status === 401) {
-            window.location.href = appPath('/login');
+            appNavigate('/login');
             return;
         }
         if (!response.ok) throw new Error(await response.text());
@@ -212,21 +216,23 @@ function setMediaType(type) {
 
 function getVisibleItems() {
     if (!mediaConfig[manager.type].backed) return [];
+    const config = mediaConfig[manager.type];
 
     const filtered = manager.photos.filter((photo) => {
+        if (photo.category !== config.hubCategory) return false;
         const haystack = [
             photo.title,
             photo.description,
             photo.category,
             photo.user_category,
-            photo.price,
+            photo.like_count,
         ].join(' ').toLowerCase();
         return !manager.query || haystack.includes(manager.query);
     });
 
     return filtered.sort((a, b) => {
         if (manager.sort === 'title') return String(a.title).localeCompare(String(b.title));
-        if (manager.sort === 'price') return Number(b.price || 0) - Number(a.price || 0);
+        if (manager.sort === 'likes') return Number(b.like_count || 0) - Number(a.like_count || 0);
         return new Date(b.created_at || 0) - new Date(a.created_at || 0);
     });
 }
@@ -241,14 +247,14 @@ function renderLibrary() {
     if (!config.backed) {
         els.mediaTable.innerHTML = emptyState(
             `${titleCase(config.plural)} workspace`,
-            `This page uses the same upload, pricing, category and management layout for ${config.plural}.`
+            `This page uses the same upload, likes, category and management layout for ${config.plural}.`
         );
         updateBulkBar();
         return;
     }
 
     if (!items.length) {
-        els.mediaTable.innerHTML = emptyState('No photos found', 'Upload media or adjust your search.');
+        els.mediaTable.innerHTML = emptyState('No media found', 'Upload media or adjust your search.');
         updateBulkBar();
         return;
     }
@@ -259,7 +265,7 @@ function renderLibrary() {
             <span>Preview</span>
             <span>Title</span>
             <span>Category</span>
-            <span>Price</span>
+            <span>Likes</span>
             <span>Status</span>
             <span>Uploaded</span>
             <span>Actions</span>
@@ -311,7 +317,7 @@ function renderPhotoRow(photo) {
                 <span>${escapeHtml(photo.file_type || 'Image')} ${escapeHtml(photo.dimensions || '')}</span>
             </div>
             <span class="pill">${escapeHtml(photo.user_category || 'Default')}</span>
-            <span>$${formatPrice(photo.price)}</span>
+            <span>${Number(photo.like_count || 0)}</span>
             <span class="${statusClass}">${status}</span>
             <span>${uploaded}</span>
             <span class="row-actions">
@@ -345,7 +351,7 @@ function renderCategories() {
     const previews = new Map();
 
     if (config.backed) {
-        manager.photos.forEach((photo) => {
+        manager.photos.filter((photo) => photo.category === config.hubCategory).forEach((photo) => {
             const name = photo.user_category || 'Default';
             counts.set(name, (counts.get(name) || 0) + 1);
             if (!previews.has(name) && (photo.thumbnail || photo.image_path)) {
@@ -394,6 +400,7 @@ function renderFileQueue() {
     }
     els.fileQueue.hidden = files.length === 0;
     els.fileQueue.innerHTML = files.map((file) => `<span>${escapeHtml(file.name)} (${formatBytes(file.size)})</span>`).join('');
+    populateUploadMetadata(files[0]);
 }
 
 async function uploadMedia(event) {
@@ -424,8 +431,12 @@ async function uploadMedia(event) {
             form.append('user_category', els.mediaCategory.value || 'Default');
             form.append('category', config.hubCategory);
             form.append('tags', els.mediaTags.value.trim());
-            form.append('price', els.mediaPrice.value || '29.99');
             form.append('photographer', manager.user?.name || manager.user?.real_name || manager.user?.username || '');
+            const metadata = await extractPhotoMetadata(file);
+            if (metadata.capturedAt) form.append('captured_at', metadata.capturedAt);
+            if (metadata.location) form.append('photo_location', metadata.location);
+            if (metadata.camera) form.append('camera', metadata.camera);
+            if (metadata.focalLength) form.append('focal_length', metadata.focalLength);
             if (els.mediaWatermark.checked) {
                 form.append('apply_watermark', 'true');
                 if (els.watermarkFile.files[0]) {
@@ -442,7 +453,6 @@ async function uploadMedia(event) {
         }
 
         els.uploadForm.reset();
-        els.mediaPrice.value = '29.99';
         updateWatermarkField();
         renderFileQueue();
         await Promise.all([loadCategories(), loadPhotos()]);
@@ -452,6 +462,61 @@ async function uploadMedia(event) {
     } finally {
         els.startUpload.disabled = false;
     }
+}
+
+async function populateUploadMetadata(file) {
+    if (!file) {
+        setUploadMetadata({
+            capturedAt: 'Waiting for upload',
+            location: 'Waiting for upload',
+            camera: 'Waiting for upload',
+            dimensions: 'Waiting for upload',
+            fileName: 'Waiting for upload',
+            fileSize: 'Waiting for upload',
+            fileFormat: 'Waiting for upload',
+        });
+        els.mediaCapturedAt.value = '';
+        els.mediaLocation.value = '';
+        els.mediaCamera.value = '';
+        els.mediaFocalLength.value = '';
+        return;
+    }
+
+    setUploadMetadata({
+        capturedAt: 'Checking metadata...',
+        location: 'Checking metadata...',
+        camera: 'Checking metadata...',
+        dimensions: 'Reading image...',
+        fileName: file.name,
+        fileSize: formatBytes(file.size),
+        fileFormat: mediaFileFormat(file),
+    });
+
+    const metadata = await extractPhotoMetadata(file);
+    setUploadMetadata({
+        capturedAt: metadata.capturedAt || 'Not embedded',
+        location: metadata.location || 'Not embedded',
+        camera: metadata.camera || 'Not embedded',
+        dimensions: metadata.dimensions || 'Unknown',
+        fileName: file.name,
+        fileSize: formatBytes(file.size),
+        fileFormat: mediaFileFormat(file),
+    });
+
+    els.mediaCapturedAt.value = metadata.capturedAt || '';
+    els.mediaLocation.value = metadata.location || '';
+    els.mediaCamera.value = metadata.camera || '';
+    els.mediaFocalLength.value = metadata.focalLength || '';
+}
+
+function setUploadMetadata(metadata) {
+    els.uploadMetaDateTime.textContent = metadata.capturedAt || 'Unknown';
+    els.uploadMetaLocation.textContent = metadata.location || 'Unknown';
+    els.uploadMetaCamera.textContent = metadata.camera || 'Unknown';
+    els.uploadMetaDimensions.textContent = metadata.dimensions || 'Unknown';
+    els.uploadMetaFileName.textContent = metadata.fileName || 'Unknown';
+    els.uploadMetaFileSize.textContent = metadata.fileSize || 'Unknown';
+    els.uploadMetaFileFormat.textContent = metadata.fileFormat || 'Unknown';
 }
 
 function updateWatermarkField() {
@@ -469,7 +534,6 @@ function openEditDialog(photoId) {
     els.editDescription.value = photo.description || '';
     els.editCategory.value = photo.user_category || 'Default';
     els.editHubCategory.value = photo.category || '';
-    els.editPrice.value = formatPrice(photo.price);
     els.editIsPublic.checked = Boolean(photo.is_public);
     els.editStatus.textContent = '';
     els.editDialog.showModal();
@@ -483,7 +547,9 @@ async function saveEdit(event) {
         description: els.editDescription.value.trim(),
         user_category: els.editCategory.value || 'Default',
         category: els.editHubCategory.value.trim(),
-        price: Number(els.editPrice.value || 0),
+        captured_at: manager.photos.find((item) => item.id === id)?.captured_at || '',
+        photo_location: manager.photos.find((item) => item.id === id)?.photo_location || '',
+        focal_length: manager.photos.find((item) => item.id === id)?.focal_length || '',
         is_public: els.editIsPublic.checked,
     };
 
@@ -548,7 +614,9 @@ async function moveSelectedToCategory() {
                 description: photo.description,
                 category: photo.category,
                 user_category: category,
-                price: photo.price,
+                captured_at: photo.captured_at,
+                photo_location: photo.photo_location,
+                focal_length: photo.focal_length,
                 is_public: photo.is_public,
             };
             const response = await fetch(appPath(`/api/photos/${id}`), {
@@ -623,10 +691,6 @@ function setStatus(element, message, type = '') {
     element.className = `status-line ${type}`.trim();
 }
 
-function formatPrice(value) {
-    return Number(value || 0).toFixed(2);
-}
-
 function formatBytes(bytes) {
     if (!bytes) return '0 B';
     const units = ['B', 'KB', 'MB', 'GB'];
@@ -637,6 +701,222 @@ function formatBytes(bytes) {
         unit += 1;
     }
     return `${value.toFixed(unit ? 1 : 0)} ${units[unit]}`;
+}
+
+async function extractPhotoMetadata(file) {
+    if (!file) return {};
+
+    const [dimensions, exif] = await Promise.all([
+        mediaImageDimensions(file).catch(() => ''),
+        readExifMetadata(file).catch(() => ({})),
+    ]);
+
+    return {
+        ...exif,
+        dimensions,
+        fileName: file.name,
+        fileSize: formatBytes(file.size),
+        fileFormat: mediaFileFormat(file),
+    };
+}
+
+function mediaImageDimensions(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(`${image.naturalWidth} x ${image.naturalHeight} px`);
+        };
+        image.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error('Unable to read image dimensions'));
+        };
+        image.src = url;
+    });
+}
+
+function mediaFileFormat(file) {
+    const extension = String(file?.name || '').split('.').pop();
+    if (file?.type) {
+        return file.type.replace('image/', '').toUpperCase();
+    }
+    return extension ? extension.toUpperCase() : '';
+}
+
+async function readExifMetadata(file) {
+    if (!/jpe?g$/i.test(file.name) && !/jpe?g/i.test(file.type)) {
+        return {};
+    }
+
+    const buffer = await file.arrayBuffer();
+    const view = new DataView(buffer);
+    const tiffOffset = findExifTiffOffset(view);
+    if (tiffOffset < 0) {
+        return {};
+    }
+
+    const littleEndian = view.getUint16(tiffOffset, false) === 0x4949;
+    if (view.getUint16(tiffOffset + 2, littleEndian) !== 0x002a) {
+        return {};
+    }
+
+    const firstIfdOffset = tiffOffset + view.getUint32(tiffOffset + 4, littleEndian);
+    const ifd0 = readExifIfd(view, tiffOffset, firstIfdOffset, littleEndian);
+    const exifIfdOffset = ifd0[0x8769]?.value;
+    const gpsIfdOffset = ifd0[0x8825]?.value;
+    const exif = exifIfdOffset ? readExifIfd(view, tiffOffset, tiffOffset + exifIfdOffset, littleEndian) : {};
+    const gps = gpsIfdOffset ? readExifIfd(view, tiffOffset, tiffOffset + gpsIfdOffset, littleEndian) : {};
+
+    const make = cleanExifString(ifd0[0x010f]?.value);
+    const model = cleanExifString(ifd0[0x0110]?.value);
+    return {
+        capturedAt: normalizeExifDate(exif[0x9003]?.value || exif[0x9004]?.value || ifd0[0x0132]?.value),
+        camera: [make, model].filter(Boolean).join(' ').trim(),
+        focalLength: formatFocalLength(exif[0x920a]?.value),
+        location: formatGpsLocation(gps),
+    };
+}
+
+function findExifTiffOffset(view) {
+    if (view.byteLength < 4 || view.getUint16(0, false) !== 0xffd8) {
+        return -1;
+    }
+
+    let offset = 2;
+    while (offset + 4 < view.byteLength) {
+        if (view.getUint8(offset) !== 0xff) {
+            return -1;
+        }
+        const marker = view.getUint8(offset + 1);
+        const size = view.getUint16(offset + 2, false);
+        if (marker === 0xe1 && asciiAt(view, offset + 4, 6) === 'Exif\u0000\u0000') {
+            return offset + 10;
+        }
+        offset += 2 + size;
+    }
+    return -1;
+}
+
+function readExifIfd(view, tiffOffset, ifdOffset, littleEndian) {
+    if (ifdOffset <= 0 || ifdOffset + 2 > view.byteLength) {
+        return {};
+    }
+
+    const entries = {};
+    const entryCount = view.getUint16(ifdOffset, littleEndian);
+    for (let index = 0; index < entryCount; index += 1) {
+        const entryOffset = ifdOffset + 2 + index * 12;
+        if (entryOffset + 12 > view.byteLength) break;
+
+        const tag = view.getUint16(entryOffset, littleEndian);
+        const type = view.getUint16(entryOffset + 2, littleEndian);
+        const count = view.getUint32(entryOffset + 4, littleEndian);
+        const byteLength = exifTypeSize(type) * count;
+        const valueOffset = byteLength <= 4 ? entryOffset + 8 : tiffOffset + view.getUint32(entryOffset + 8, littleEndian);
+        entries[tag] = {
+            type,
+            count,
+            value: readExifValue(view, valueOffset, type, count, littleEndian),
+        };
+    }
+    return entries;
+}
+
+function readExifValue(view, offset, type, count, littleEndian) {
+    if (offset < 0 || offset >= view.byteLength) {
+        return '';
+    }
+
+    if (type === 2) {
+        return asciiAt(view, offset, Math.min(count, view.byteLength - offset)).replace(/\0+$/, '');
+    }
+    if (type === 3) {
+        return readExifNumbers(view, offset, count, 2, littleEndian, 'getUint16');
+    }
+    if (type === 4) {
+        return readExifNumbers(view, offset, count, 4, littleEndian, 'getUint32');
+    }
+    if (type === 5) {
+        return readExifRationals(view, offset, count, littleEndian, false);
+    }
+    if (type === 10) {
+        return readExifRationals(view, offset, count, littleEndian, true);
+    }
+    return '';
+}
+
+function readExifNumbers(view, offset, count, size, littleEndian, method) {
+    const values = [];
+    for (let index = 0; index < count; index += 1) {
+        const valueOffset = offset + index * size;
+        if (valueOffset + size > view.byteLength) break;
+        values.push(view[method](valueOffset, littleEndian));
+    }
+    return count === 1 ? values[0] : values;
+}
+
+function readExifRationals(view, offset, count, littleEndian, signed) {
+    const values = [];
+    for (let index = 0; index < count; index += 1) {
+        const valueOffset = offset + index * 8;
+        if (valueOffset + 8 > view.byteLength) break;
+        const numerator = signed ? view.getInt32(valueOffset, littleEndian) : view.getUint32(valueOffset, littleEndian);
+        const denominator = signed ? view.getInt32(valueOffset + 4, littleEndian) : view.getUint32(valueOffset + 4, littleEndian);
+        values.push(denominator ? numerator / denominator : 0);
+    }
+    return count === 1 ? values[0] : values;
+}
+
+function exifTypeSize(type) {
+    return { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 }[type] || 0;
+}
+
+function asciiAt(view, offset, length) {
+    let text = '';
+    for (let index = 0; index < length && offset + index < view.byteLength; index += 1) {
+        text += String.fromCharCode(view.getUint8(offset + index));
+    }
+    return text;
+}
+
+function cleanExifString(value) {
+    return String(value || '').replace(/\0/g, '').trim();
+}
+
+function normalizeExifDate(value) {
+    const text = cleanExifString(value);
+    const match = text.match(/^(\d{4}):(\d{2}):(\d{2})\s+(.+)$/);
+    if (!match) {
+        return text;
+    }
+    return `${match[1]}-${match[2]}-${match[3]} ${match[4]}`;
+}
+
+function formatFocalLength(value) {
+    const focal = Array.isArray(value) ? value[0] : value;
+    if (!focal) {
+        return '';
+    }
+    return `${Number(focal).toFixed(1).replace(/\.0$/, '')}mm`;
+}
+
+function formatGpsLocation(gps) {
+    const lat = gpsCoordinate(gps[0x0002]?.value, gps[0x0001]?.value);
+    const lon = gpsCoordinate(gps[0x0004]?.value, gps[0x0003]?.value);
+    if (lat === null || lon === null) {
+        return '';
+    }
+    return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+}
+
+function gpsCoordinate(parts, ref) {
+    if (!Array.isArray(parts) || parts.length < 3) {
+        return null;
+    }
+    const direction = cleanExifString(ref);
+    const decimal = parts[0] + parts[1] / 60 + parts[2] / 3600;
+    return direction === 'S' || direction === 'W' ? -decimal : decimal;
 }
 
 function titleFromFilename(filename) {

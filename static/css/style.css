@@ -207,21 +207,13 @@ html, body {
 .home-section-card {
     position: relative;
     display: block;
-    min-height: 164px;
-    aspect-ratio: 1.28 / 1;
+    aspect-ratio: 1 / 1;
     overflow: hidden;
     border-radius: 8px;
     background: #f0f2f5;
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12);
     color: #fff;
     text-decoration: none;
-}
-
-.home-section-card::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.52));
 }
 
 .home-section-card img {
@@ -232,29 +224,13 @@ html, body {
     transition: transform 0.3s ease;
 }
 
-.home-section-card span {
-    position: absolute;
-    left: 16px;
-    right: 16px;
-    bottom: 14px;
-    z-index: 1;
-    display: grid;
-    gap: 2px;
-}
-
-.home-section-card strong {
-    font-size: 18px;
-    line-height: 1.1;
-}
-
-.home-section-card small {
-    color: rgba(255,255,255,0.88);
-    font-size: 12px;
-    font-weight: 600;
-}
-
 .home-section-card:hover img {
     transform: scale(1.04);
+}
+
+.home-section-card:focus-visible {
+    outline: 3px solid #007bff;
+    outline-offset: 3px;
 }
 
 .header-actions {
@@ -305,40 +281,6 @@ html, body {
     color: var(--primary-color);
 }
 
-.cart-link {
-    position: relative;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-.cart-link svg {
-    width: 24px;
-    height: 24px;
-    stroke: var(--text-dark);
-    fill: none;
-    stroke-width: 1.5;
-}
-
-.cart-count {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: var(--danger-color);
-    color: white;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: bold;
-}
-
 .sign-in {
     padding: 8px 16px;
     border: 1px solid var(--border-color);
@@ -385,7 +327,7 @@ html, body {
     background: #0056b3;
 }
 
-.btn-add-cart {
+.btn-like {
     background: white;
     border: 2px solid var(--text-dark);
     padding: 10px 20px;
@@ -398,7 +340,8 @@ html, body {
     transition: all 0.3s;
 }
 
-.btn-add-cart:hover {
+.btn-like:hover,
+.btn-like.liked {
     background: var(--light-bg);
 }
 
@@ -489,18 +432,6 @@ main.main-container {
     font-weight: 500;
 }
 
-#priceRange {
-    width: 100%;
-    cursor: pointer;
-}
-
-#priceDisplay {
-    display: block;
-    margin-top: 8px;
-    font-size: 13px;
-    color: var(--text-light);
-}
-
 /* Collections Sidebar */
 .collections-header {
     display: flex;
@@ -557,6 +488,12 @@ main.main-container {
     font-weight: 600;
 }
 
+.photos-page-subtitle {
+    margin: -10px 0 20px;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
 .photos-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -598,9 +535,27 @@ main.main-container {
     text-overflow: ellipsis;
 }
 
-.photo-card-price {
+.photo-card-meta {
     color: var(--text-light);
+    font-size: 11px;
+    line-height: 1.4;
+    margin-bottom: 6px;
+}
+
+.photo-card-likes {
+    background: transparent;
+    border: 0;
+    color: var(--text-light);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-size: 12px;
+    padding: 0;
+}
+
+.photo-card-likes.liked {
+    color: var(--danger-color);
 }
 
 /* Pagination */
@@ -887,10 +842,6 @@ main.main-container {
 
     .home-section-card {
         min-height: 220px;
-    }
-
-    .home-section-card span {
-        font-size: 24px;
     }
 
     .header-actions {

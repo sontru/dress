@@ -48,6 +48,7 @@ func registerRoutes(router *mux.Router, basePath string, db *sql.DB) {
 
 	// Page routes
 	router.HandleFunc(basePath+"/", handlers.HomeHandler(db)).Methods("GET")
+	router.HandleFunc(basePath+"/images", handlers.ImagesPageHandler(db)).Methods("GET")
 	router.HandleFunc(basePath+"/photos", handlers.PhotosPageHandler(db)).Methods("GET")
 	router.HandleFunc(basePath+"/my-media", handlers.MediaManagerHandler(db)).Methods("GET")
 	router.HandleFunc(basePath+"/profile/edit", handlers.ProfileEditHandler(db)).Methods("GET")
@@ -91,10 +92,9 @@ func registerRoutes(router *mux.Router, basePath string, db *sql.DB) {
 	apiRouter.HandleFunc("/collections/{id}", handlers.GetCollectionHandler(db)).Methods("GET")
 	apiRouter.HandleFunc("/collections/{id}/add", handlers.AddPhotoToCollectionHandler(db)).Methods("POST")
 
-	// Cart
-	apiRouter.HandleFunc("/cart", handlers.GetCartHandler(db)).Methods("GET")
-	apiRouter.HandleFunc("/cart/add", handlers.AddToCartHandler(db)).Methods("POST")
-	apiRouter.HandleFunc("/cart/remove/{id}", handlers.RemoveFromCartHandler(db)).Methods("DELETE")
+	// Likes
+	apiRouter.HandleFunc("/images/{id}/like", handlers.LikeImageHandler(db)).Methods("POST")
+	apiRouter.HandleFunc("/images/{id}/like", handlers.UnlikeImageHandler(db)).Methods("DELETE")
 
 }
 

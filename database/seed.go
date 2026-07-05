@@ -21,9 +21,9 @@ func SeedDatabase(db *sql.DB) error {
 		icon string
 	}{
 		{"Photos", "📷"},
-		{"Illustrations", "🎨"},
-		{"Vectors", "📐"},
+		{"Images", "🎨"},
 		{"Videos", "🎬"},
+		{"Audio", "🎧"},
 		{"dress", "👗"},
 		{"evening dress", "🌙"},
 		{"fashion", "👔"},
@@ -69,8 +69,6 @@ func SeedDatabase(db *sql.DB) error {
 		resolution   string
 		colorMode    string
 		photographer string
-		memberSince  string
-		price        float64
 	}{
 		{
 			title:        "Woman in Elegant Dress",
@@ -85,8 +83,6 @@ func SeedDatabase(db *sql.DB) error {
 			resolution:   "300 DPI",
 			colorMode:    "RGB",
 			photographer: "Alex Morgan",
-			memberSince:  "May 2016",
-			price:        29.99,
 		},
 		{
 			title:        "Evening Gown",
@@ -101,8 +97,6 @@ func SeedDatabase(db *sql.DB) error {
 			resolution:   "300 DPI",
 			colorMode:    "RGB",
 			photographer: "Sarah Johnson",
-			memberSince:  "March 2018",
-			price:        34.99,
 		},
 		{
 			title:        "Fashion Portrait",
@@ -117,8 +111,6 @@ func SeedDatabase(db *sql.DB) error {
 			resolution:   "300 DPI",
 			colorMode:    "RGB",
 			photographer: "Michael Chen",
-			memberSince:  "June 2019",
-			price:        24.99,
 		},
 		{
 			title:        "Studio Portrait",
@@ -133,8 +125,6 @@ func SeedDatabase(db *sql.DB) error {
 			resolution:   "300 DPI",
 			colorMode:    "RGB",
 			photographer: "Emma Wilson",
-			memberSince:  "January 2017",
-			price:        19.99,
 		},
 		{
 			title:        "Elegant Cocktail Dress",
@@ -149,8 +139,6 @@ func SeedDatabase(db *sql.DB) error {
 			resolution:   "300 DPI",
 			colorMode:    "RGB",
 			photographer: "David Martinez",
-			memberSince:  "February 2015",
-			price:        24.99,
 		},
 		{
 			title:        "Luxury Evening Wear",
@@ -165,8 +153,6 @@ func SeedDatabase(db *sql.DB) error {
 			resolution:   "300 DPI",
 			colorMode:    "RGB",
 			photographer: "Isabella Rodriguez",
-			memberSince:  "August 2014",
-			price:        39.99,
 		},
 		{
 			title:        "Modern Fashion Look",
@@ -181,8 +167,6 @@ func SeedDatabase(db *sql.DB) error {
 			resolution:   "300 DPI",
 			colorMode:    "RGB",
 			photographer: "James Photography",
-			memberSince:  "July 2016",
-			price:        29.99,
 		},
 		{
 			title:        "Professional Headshot",
@@ -197,8 +181,6 @@ func SeedDatabase(db *sql.DB) error {
 			resolution:   "300 DPI",
 			colorMode:    "RGB",
 			photographer: "Lisa Chen",
-			memberSince:  "November 2017",
-			price:        16.99,
 		},
 		{
 			title:        "Designer Evening Collection",
@@ -213,8 +195,6 @@ func SeedDatabase(db *sql.DB) error {
 			resolution:   "300 DPI",
 			colorMode:    "RGB",
 			photographer: "Roberto Fontana",
-			memberSince:  "December 2013",
-			price:        44.99,
 		},
 		{
 			title:        "Casual Elegance",
@@ -229,8 +209,6 @@ func SeedDatabase(db *sql.DB) error {
 			resolution:   "300 DPI",
 			colorMode:    "RGB",
 			photographer: "Nina Petrov",
-			memberSince:  "April 2018",
-			price:        21.99,
 		},
 		{
 			title:        "Portrait in Natural Light",
@@ -245,22 +223,20 @@ func SeedDatabase(db *sql.DB) error {
 			resolution:   "300 DPI",
 			colorMode:    "RGB",
 			photographer: "Marcus Johnson",
-			memberSince:  "September 2015",
-			price:        18.99,
 		},
 	}
 
 	for _, photo := range photos {
 		result, err := db.Exec(
-			`INSERT OR IGNORE INTO photos 
+			`INSERT OR IGNORE INTO images 
 			 (title, description, image_path, thumbnail, category, dimensions,
 			  file_type, file_size, orientation, resolution, color_mode, 
-			  photographer, member_since, price)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			  photographer)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			photo.title, photo.description, photo.imagePath, photo.thumbnail,
 			photo.category, photo.dimensions, photo.fileType, photo.fileSize,
 			photo.orientation, photo.resolution, photo.colorMode,
-			photo.photographer, photo.memberSince, photo.price)
+			photo.photographer)
 
 		if err != nil {
 			log.Printf("Error inserting photo: %v", err)
@@ -291,7 +267,7 @@ func SeedDatabase(db *sql.DB) error {
 		if tags, ok := tagMapping[int(photoID)]; ok {
 			for _, tagID := range tags {
 				_, err := db.Exec(
-					"INSERT OR IGNORE INTO photo_tags (photo_id, tag_id) VALUES (?, ?)",
+					"INSERT OR IGNORE INTO image_tags (image_id, tag_id) VALUES (?, ?)",
 					photoID, tagID)
 				if err != nil {
 					log.Printf("Error linking tag to photo: %v", err)
@@ -313,7 +289,7 @@ func SeedDatabase(db *sql.DB) error {
 	// Add photos to collection
 	for i := 1; i <= 3; i++ {
 		_, err := db.Exec(
-			"INSERT OR IGNORE INTO collection_photos (collection_id, photo_id) VALUES (?, ?)",
+			"INSERT OR IGNORE INTO collection_images (collection_id, image_id) VALUES (?, ?)",
 			collectionID, i)
 		if err != nil {
 			log.Printf("Error adding photo to collection: %v", err)

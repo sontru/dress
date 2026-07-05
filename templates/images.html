@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Images - My Media Hub</title>
+    <link rel="stylesheet" href="/mmh/static/css/style.css">
+    <link rel="stylesheet" href="/mmh/static/css/layout.css">
+</head>
+<body data-media-category="Images" data-media-label="images">
+    <!-- Header Navigation -->
+    <header class="header">
+        <div class="container">
+            <a href="/mmh/" class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24">
+                    <path d="M3 13a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-2v-2a4 4 0 0 0-8 0v2H3zm8-8a2 2 0 1 1 0 4 2 2 0 0 1 0-4z"/>
+                </svg>
+                <span>My Media Hub</span>
+            </a>
+
+            <nav class="nav-menu">
+                <a href="/mmh/photos" class="nav-link">Photos</a>
+                <a href="/mmh/images" class="nav-link">Images</a>
+                <a href="/mmh/#videos" class="nav-link">Videos</a>
+                <a href="/mmh/#audio" class="nav-link">Audio</a>
+                <a href="#" class="nav-link">Collections</a>
+            </nav>
+
+            <div class="header-actions">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search for images, videos, audio and more" />
+                    <svg class="search-icon" viewBox="0 0 24 24">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <a href="/mmh/register" id="registerButton" class="explore-link" data-auth-register>Register</a>
+                <a href="/mmh/my-media" id="myMediaButton" class="sign-in" style="display: none; text-decoration: none;">My Media</a>
+                <a href="/mmh/login" id="authButton" class="sign-in" style="text-decoration: none;">Sign in</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        <!-- Filters Sidebar -->
+        <aside class="sidebar">
+            <div class="filter-section">
+                <h3>Categories</h3>
+                <div id="categoriesList" class="filter-list">
+                    <!-- Categories will be loaded here -->
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <h3>Tags</h3>
+                <div id="tagsList" class="filter-list">
+                    <!-- Tags will be loaded here -->
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- Images Grid -->
+        <section class="photos-section">
+            <h1 class="photos-page-title">Images</h1>
+            <div class="photos-grid" id="photosGrid">
+                <!-- Images will be loaded here -->
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination">
+                <button id="prevBtn" class="pag-btn">Previous</button>
+                <span id="pageInfo">Page 1</span>
+                <button id="nextBtn" class="pag-btn">Next</button>
+            </div>
+        </section>
+
+        <!-- Collections Sidebar -->
+        <aside class="collections-sidebar">
+            <div class="collections-header">
+                <h3>My Collections</h3>
+                <button id="newCollectionBtn" class="btn-add">+ New</button>
+            </div>
+
+            <div id="collectionsList" class="collections-list">
+                <!-- Collections will be loaded here -->
+            </div>
+        </aside>
+    </main>
+
+    <!-- Photo Detail Modal -->
+    <div id="photoModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            <div class="photo-detail-container">
+                <div class="photo-image-section">
+                    <img id="modalImage" src="" alt="" />
+                </div>
+                <div class="photo-info-section">
+                    <h2 id="modalTitle"></h2>
+                    <p id="modalDescription"></p>
+
+                    <div class="photo-meta">
+                        <div class="meta-item">
+                            <label>ID</label>
+                            <span id="modalID"></span>
+                        </div>
+                        <div class="meta-item">
+                            <label>Dimensions</label>
+                            <span id="modalDimensions"></span>
+                        </div>
+                        <div class="meta-item">
+                            <label>File type</label>
+                            <span id="modalFileType"></span>
+                        </div>
+                        <div class="meta-item">
+                            <label>File size</label>
+                            <span id="modalFileSize"></span>
+                        </div>
+                        <div class="meta-item">
+                            <label>Orientation</label>
+                            <span id="modalOrientation"></span>
+                        </div>
+                        <div class="meta-item">
+                            <label>Resolution</label>
+                            <span id="modalResolution"></span>
+                        </div>
+                        <div class="meta-item">
+                            <label>Color mode</label>
+                            <span id="modalColorMode"></span>
+                        </div>
+                    </div>
+
+                    <div class="photo-photographer">
+                        <div class="photographer-info">
+                            <div class="photographer-avatar"></div>
+                            <div>
+                                <p id="modalPhotographer"></p>
+                                <span id="modalMemberSince"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="photo-tags">
+                        <h4>Keywords</h4>
+                        <div id="modalTags" class="tags-list">
+                            <!-- Tags will be loaded here -->
+                        </div>
+                    </div>
+
+                    <div class="photo-actions">
+                        <button id="addToCollectionBtn" class="btn-primary">Add to collection</button>
+                        <button id="likePhotoBtn" class="btn-like">
+                            <span class="like-icon">♡</span>
+                            <span id="modalLikeText">Like</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collection Modal -->
+    <div id="collectionModal" class="modal">
+        <div class="modal-content modal-sm">
+            <button class="modal-close">&times;</button>
+            <h3>Create New Collection</h3>
+            <form id="collectionForm">
+                <div class="form-group">
+                    <label>Collection Name</label>
+                    <input type="text" id="collectionName" required />
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="collectionDesc"></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Create</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/mmh/static/js/paths.js"></script>
+    <script src="/mmh/static/js/app.js"></script>
+</body>
+</html>

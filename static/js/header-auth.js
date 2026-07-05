@@ -38,7 +38,7 @@ async function setupHeaderAuth() {
             try {
                 const logoutResponse = await fetch(appPath('/api/logout'), { method: 'POST' });
                 if (!logoutResponse.ok) throw new Error(await logoutResponse.text());
-                window.location.href = appPath('/');
+                appNavigate('/');
             } catch (error) {
                 console.error('Error signing out:', error);
                 authButton.style.pointerEvents = '';

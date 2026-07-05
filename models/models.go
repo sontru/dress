@@ -13,6 +13,7 @@ type Photo struct {
 	UserCategory         string    `json:"user_category"`
 	Tags                 []string  `json:"tags"`
 	Keywords             []string  `json:"keywords"`
+	FileName             string    `json:"file_name"`
 	Dimensions           string    `json:"dimensions"`
 	FileType             string    `json:"file_type"`
 	FileSize             string    `json:"file_size"`
@@ -22,7 +23,12 @@ type Photo struct {
 	Photographer         string    `json:"photographer"`
 	PhotographerUsername string    `json:"photographer_username"`
 	MemberSince          string    `json:"member_since"`
-	Price                float64   `json:"price"`
+	CapturedAt           string    `json:"captured_at"`
+	PhotoLocation        string    `json:"photo_location"`
+	Camera               string    `json:"camera"`
+	FocalLength          string    `json:"focal_length"`
+	LikeCount            int       `json:"like_count"`
+	LikedByUser          bool      `json:"liked_by_user"`
 	IsPublic             bool      `json:"is_public"`
 	CreatedAt            time.Time `json:"created_at"`
 	UpdatedAt            time.Time `json:"updated_at"`
@@ -48,14 +54,6 @@ type Collection struct {
 	PhotoCount  int       `json:"photo_count"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-type CartItem struct {
-	ID       int       `json:"id"`
-	PhotoID  int       `json:"photo_id"`
-	Quantity int       `json:"quantity"`
-	Price    float64   `json:"price"`
-	AddedAt  time.Time `json:"added_at"`
 }
 
 type User struct {

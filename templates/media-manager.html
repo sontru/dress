@@ -20,25 +20,19 @@
 
             <nav class="nav-menu">
                 <a href="/mmh/photos" class="nav-link">Photos</a>
-                <a href="/mmh/#illustrations" class="nav-link">Illustrations</a>
-                <a href="/mmh/#vectors" class="nav-link">Vectors</a>
+                <a href="/mmh/images" class="nav-link">Images</a>
                 <a href="/mmh/#videos" class="nav-link">Videos</a>
+                <a href="/mmh/#audio" class="nav-link">Audio</a>
                 <a href="#" class="nav-link">Collections</a>
             </nav>
 
             <div class="header-actions">
                 <div class="search-box">
-                    <input id="managerSearch" type="search" placeholder="Search for photos, vectors, videos and more" autocomplete="off">
+                    <input id="managerSearch" type="search" placeholder="Search for images, videos, audio and more" autocomplete="off">
                     <svg class="search-icon" viewBox="0 0 24 24">
                         <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                 </div>
-                <a href="#" class="cart-link">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m10 0h2m-11 0a2 2 0 11-4 0 2 2 0 014 0m12 0a2 2 0 11-4 0 2 2 0 014 0"/>
-                    </svg>
-                    <span class="cart-count">0</span>
-                </a>
                 <a href="/mmh/my-media" id="myMediaButton" class="sign-in" style="text-decoration: none;">My Media</a>
                 <a href="/mmh/login" id="authButton" class="sign-in" style="text-decoration: none;">Sign out</a>
             </div>
@@ -101,7 +95,7 @@
             <div class="manager-heading">
                 <div>
                     <h1>My Media</h1>
-                    <p>Upload, manage and sell your content</p>
+                    <p>Upload, manage and organize your content</p>
                 </div>
                 <div class="heading-actions">
                     <button id="createCategoryTop" class="secondary-button" type="button">
@@ -120,17 +114,17 @@
                     <svg viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14m18 0H3m18 0-5-6-4 5-3-4-6 5"/></svg>
                     Photos
                 </button>
-                <button class="media-tab" type="button" data-type="illustrations" role="tab" aria-selected="false">
+                <button class="media-tab" type="button" data-type="images" role="tab" aria-selected="false">
                     <svg viewBox="0 0 24 24"><path d="m3 21 3.5-1 11-11-2.5-2.5-11 11L3 21ZM14 5.5 16.5 8 19 5.5 16.5 3 14 5.5Z"/></svg>
-                    Illustrations
-                </button>
-                <button class="media-tab" type="button" data-type="vectors" role="tab" aria-selected="false">
-                    <svg viewBox="0 0 24 24"><path d="M4 20 20 4M8 4h12v12M4 8h4v4H4zM12 16h4v4h-4z"/></svg>
-                    Vectors
+                    Images
                 </button>
                 <button class="media-tab" type="button" data-type="videos" role="tab" aria-selected="false">
                     <svg viewBox="0 0 24 24"><path d="M4 6h12v12H4zM16 10l5-3v10l-5-3"/></svg>
                     Videos
+                </button>
+                <button class="media-tab" type="button" data-type="audio" role="tab" aria-selected="false">
+                    <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13M9 9l12-2M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm12-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>
+                    Audio
                 </button>
             </div>
 
@@ -150,6 +144,37 @@
                     </label>
 
                     <div id="fileQueue" class="file-queue" hidden></div>
+
+                    <div id="uploadMetadata" class="upload-metadata-grid" aria-live="polite">
+                        <div>
+                            <label>Date and time</label>
+                            <span id="uploadMetaDateTime">Waiting for upload</span>
+                        </div>
+                        <div>
+                            <label>Location</label>
+                            <span id="uploadMetaLocation">Waiting for upload</span>
+                        </div>
+                        <div>
+                            <label>Camera</label>
+                            <span id="uploadMetaCamera">Waiting for upload</span>
+                        </div>
+                        <div>
+                            <label>Dimensions</label>
+                            <span id="uploadMetaDimensions">Waiting for upload</span>
+                        </div>
+                        <div>
+                            <label>File name</label>
+                            <span id="uploadMetaFileName">Waiting for upload</span>
+                        </div>
+                        <div>
+                            <label>File size</label>
+                            <span id="uploadMetaFileSize">Waiting for upload</span>
+                        </div>
+                        <div>
+                            <label>File format</label>
+                            <span id="uploadMetaFileFormat">Waiting for upload</span>
+                        </div>
+                    </div>
 
                     <fieldset class="upload-options">
                         <legend>Upload options</legend>
@@ -178,20 +203,18 @@
                             Tags
                             <input id="mediaTags" name="tags" type="text" placeholder="fashion, evening, satin">
                         </label>
-                        <div class="split-fields">
-                            <label>
-                                Price
-                                <span class="money-input"><span>$</span><input id="mediaPrice" name="price" type="number" min="0" step="0.01" value="29.99"></span>
-                            </label>
-                            <label>
-                                License
-                                <select id="mediaLicense">
-                                    <option>Standard License</option>
-                                    <option>Extended License</option>
-                                    <option>Editorial Use</option>
-                                </select>
-                            </label>
-                        </div>
+                        <input id="mediaCapturedAt" name="captured_at" type="hidden">
+                        <input id="mediaLocation" name="photo_location" type="hidden">
+                        <input id="mediaCamera" name="camera" type="hidden">
+                        <input id="mediaFocalLength" name="focal_length" type="hidden">
+                        <label>
+                            License
+                            <select id="mediaLicense">
+                                <option>Standard License</option>
+                                <option>Extended License</option>
+                                <option>Editorial Use</option>
+                            </select>
+                        </label>
                         <label class="checkbox-line watermark-toggle">
                             <input id="mediaWatermark" name="apply_watermark" type="checkbox">
                             <span>Apply watermark</span>
@@ -220,7 +243,7 @@
                             <select id="sortSelect" class="select-button" aria-label="Sort media">
                                 <option value="newest">Newest first</option>
                                 <option value="title">Title</option>
-                                <option value="price">Price</option>
+                                <option value="likes">Likes</option>
                             </select>
                             <button id="gridView" class="icon-button selected" type="button" title="Grid view" aria-label="Grid view">
                                 <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
@@ -266,7 +289,6 @@
             <label>Description<textarea id="editDescription" rows="4"></textarea></label>
             <label>Category<select id="editCategory"></select></label>
             <label>My Media Hub category<input id="editHubCategory" type="text"></label>
-            <label>Price<input id="editPrice" type="number" min="0" step="0.01"></label>
             <label class="checkbox-line"><input id="editIsPublic" type="checkbox"> Published</label>
             <div class="dialog-actions">
                 <button class="secondary-button" type="button" data-close-dialog>Cancel</button>

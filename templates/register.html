@@ -173,7 +173,7 @@
                     throw new Error(await response.text());
                 }
 
-                window.location.href = appPath('/');
+                appNavigate('/my-media');
             } catch (error) {
                 authStatus.textContent = error.message.trim() || 'Registration failed.';
             } finally {

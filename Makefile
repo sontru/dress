@@ -48,7 +48,7 @@ lint:
 clean:
 	@echo "Cleaning build artifacts..."
 	rm -f photo-library
-	rm -f photo_library.db
+	rm -f media_hub.db
 	go clean
 
 install: deps build
